@@ -13,26 +13,8 @@ PusherService::PusherService(
 	this->fullUrl += ".pusher.com:80/app/";
 	this->fullUrl += key;
 	this->fullUrl += "?client=js&version=7.0.3&protocol=5";
-	// this->handleConnection();
-	this->channel = NULL;
-}
-
-bool PusherService::poll() {
-	const bool available = this->available();
-	if (available) {
-		websockets::WebsocketsClient::poll();
-	} else {
-		this->handleConnection();
-	}
-	return available;
-}
-
-void PusherService::subscribeToChannel(const char *channel) {
-	const bool channelUnset = this->channel == NULL;
-	this->channel = channel;
-	if (channelUnset) {
-		this->handleConnection();
-	}
+	this->connected = false;
+	this->setupEventDriver();
 }
 
 void PusherService::registerEventHandler(
@@ -42,46 +24,55 @@ void PusherService::registerEventHandler(
 	this->messageHandlers[eventKey] = callback;
 }
 
-static String extractEventKeyFromMessage(websockets::WebsocketsMessage msg) {
-	String eventKey = "";
-	int eventKeyStart = msg.data().indexOf("\"event\":\"") + 9;
-	int eventKeyEnd = msg.data().indexOf("\"", eventKeyStart);
-	eventKey = msg.data().substring(eventKeyStart, eventKeyEnd);
-	return eventKey;
+bool PusherService::poll() {
+	connected = this->available();
+	if (connected) {
+		websockets::WebsocketsClient::poll();
+	} else {
+		this->handleConnection();
+	}
+	return connected;
 }
 
-void PusherService::handleSubscription() {
+void PusherService::subscribeToChannel(const char *channel) {
+	if (connected) {
+		this->sendSubReq(channel);
+	} else {
+		this->registerEventHandler("pusher:connection_established", [this, channel](String& message){
+			this->sendSubReq(channel);
+		});
+	}
+}
+
+void PusherService::sendSubReq(const char *channel) {
 	String message = "{\"event\":\"pusher:subscribe\",\"data\":{\"channel\":\"";
 	message += channel;
 	message += "\"}}";
 	this->send(message.c_str());
-	this->onMessage([this](websockets::WebsocketsMessage msg){
-		Serial.println("Got Message: " + msg.data());
-		String eventKey = extractEventKeyFromMessage(msg);
+}
 
-		if(messageHandlers.count(std::string(eventKey.c_str()))) {
-			messageHandlers[std::string(eventKey.c_str())](msg);
-		} else {
-			Serial.println("No handler registered for this event. eventKey: " + eventKey);
-			Serial.println("All registered event keys:");
-            for(const auto& pair : messageHandlers) {
-                Serial.println(pair.first.c_str());  // Print the key
-            }
+void PusherService::setupEventDriver() {
+	this->onMessage([this](websockets::WebsocketsMessage msg){
+		try {
+			String eventKey = PusherService::Message(msg).event();
+			if(messageHandlers.count(std::string(eventKey.c_str()))) {
+				String message = PusherService::Message(msg).message();
+				messageHandlers[std::string(eventKey.c_str())](message);
+			} else {
+				Serial.println("No handler registered for this event. eventKey: " + eventKey);
+			}
+		} catch (const std::exception& e) {
+			Serial.println("Exception caught: " + String(e.what()));
 		}
 	});
 }
 
-void PusherService::handleConnection() {
-	bool connected = this->connect(fullUrl);
+const bool PusherService::handleConnection() {
+	connected = this->connect(fullUrl);
 	if (connected) {
 		Serial.println("Connected!");
-		if (this->channel != NULL) {
-			this->handleSubscription();
-		} else {
-			Serial.println("No channel set!");
-		}
 	} else {
 		Serial.println("Not Connected!");
 	}
+	return connected;
 }
-

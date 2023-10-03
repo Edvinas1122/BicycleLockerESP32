@@ -1,16 +1,17 @@
 #ifndef PUSHER_H
 # define PUSHER_H
 
+#include <Arduino.h>
 #include <ArduinoWebsockets.h>
 #include <functional>
 #include <unordered_map>
+#include <ArduinoJson.h>
 
 class PusherService: 
 	public websockets::WebsocketsClient 
 {
-
 	public:
-	typedef std::function<void(websockets::WebsocketsMessage)> MessageCallback;
+	typedef std::function<void(String&)> MessageCallback;
 
 	public:
 		PusherService(
@@ -19,7 +20,7 @@ class PusherService:
 		);
 		virtual ~PusherService() {};
 		bool poll();
-		void subscribeToChannel(const char *channel);
+		void subscribeToChannel(const char *);
 		void registerEventHandler(
 			const char	*eventKey,
 			MessageCallback callback
@@ -27,11 +28,31 @@ class PusherService:
 
 	private:
 		String fullUrl;
-		const char *channel;
 		std::unordered_map<std::string, MessageCallback> messageHandlers;
+		bool connected;
 
-		void handleConnection();
-		void handleSubscription();
+		void sendSubReq(const char *);
+		void setupEventDriver();
+	
+		const bool handleConnection();
+		void registerDefaultChannelHandling();
+
+	public:
+
+	class Message {
+		public:
+		Message(websockets::WebsocketsMessage);
+
+		const String event();
+	
+		// template <typename Format = String>
+		const String message();
+
+		private:
+		StaticJsonDocument<256> json;
+		// void parseJson();
+		// const websockets::WebsocketsMessage msg;
+	};
 };
 
 #endif

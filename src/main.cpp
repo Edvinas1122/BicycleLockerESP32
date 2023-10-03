@@ -3,8 +3,10 @@
 #include <Display.h>
 #include <Network.h>
 // #include <ArduinoWebsockets.h>
+#include <WiFiClientSecure.h>
 #include <Pusher.h>
 #include "env.h"
+#include "UserMessage.h"
 
 Display display;
 
@@ -13,43 +15,75 @@ void loggingMethod(const char *message) {
 	display.displayText(message);
 }
 
-void postToServer(
-	WiFiClient &client,
+void postToPusherEndpoint(
+	WiFiClientSecure &client,
 	HTTPClient &http,
-	const char *message
+	const char *message,
+	const char *event = "ping"
 ) {
 	http.begin(client, "https://bicycle-share-front-end.vercel.app/pusher/update");
 	http.addHeader("Content-Type", "application/json");
 	http.addHeader("x-password", PUSHER_KEY);
-	String body = "{\"event\":\"observe\",\"message\":\"";
-		body += message;
-		body += "\"}";
+	String body = "{\"event\":\"";
+	body += event;
+	body += "\",\"message\":\"";
+	body += message;
+	body += "\"}";
 	const int response_code = http.POST(body);
-	if (response_code != 200) {
-		loggingMethod(
-			String("Failed to POST to server: " + String(response_code)).c_str()
-		);
-	}
+	Serial.println(
+		String("POST to server: " + String(response_code)).c_str()
+	);
 	http.end();
 }
+
+void registerHandler(
+	PusherService &service,
+	WiFiClientSecure &client,
+	HTTPClient &http,
+	const char *listenEvent,
+	const char *respondEvent = "ping",
+	String (*handler)(String &msg) = [](String &msg) { return msg; }
+) {
+	service.registerEventHandler(
+		listenEvent,
+		[&http, &client, respondEvent, listenEvent, handler](String &msg) {
+			Serial.print(listenEvent);
+			Serial.println(" --Triggered");
+			postToPusherEndpoint(client, http, handler(msg).c_str(), respondEvent);
+		}
+	);
+}
+
 /*
 	https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol/#connection-closure
 */
-void handleNetworkTasks(void *parameter) {
+void handleNetworkTasks(
+	void *parameter
+) {
 	PusherService lockerService(
 		PUSHER_KEY,
 		PUSHER_CLUSTER
 	);
-    WiFiClient client;
+    WiFiClientSecure client;
     HTTPClient http;
-	// client.setInsecure();
-	postToServer(client, http, "online");
+
+	client.setInsecure();
+
 	lockerService.subscribeToChannel("locker-device");
+	lockerService.registerEventHandler("pusher_internal:subscription_succeeded", [](String& message){
+		Serial.println("Subscription succeeded!");
+	});
+	registerHandler(lockerService, client, http,
+		"ping", "pong",
+		[](String &msg) {
+			display.displayText(UserMessage(msg.c_str()).username().c_str());
+			return String("online");
+		});
 	lockerService.registerEventHandler(
-		"observe",
-		[&http, &client](websockets::WebsocketsMessage msg) {
-			loggingMethod(msg.data().c_str());
-			postToServer(client, http, "online");
+		"testing",
+		[&http, &client](String &msg) {
+			Serial.println("testing Triggered");
+			loggingMethod(msg.c_str());
 		}
 	);
 
@@ -60,8 +94,9 @@ void handleNetworkTasks(void *parameter) {
 		} else {
 			connectionAttempts++;
 			loggingMethod(
-				String("Reestablishing connection... in " + String(connectionAttempts) + " seconds").c_str()
-			);
+				String("Reestablishing connection... in "
+					+ String(connectionAttempts) 
+					+ " seconds").c_str());
 			delay(1000 * connectionAttempts); // should be exponential backoff
 		}
 		delay(500);
