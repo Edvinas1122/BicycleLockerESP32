@@ -1,27 +1,21 @@
 #include "UserMessage.h"
 
-UserMessage::UserMessage(const char *message) : message(message) {}
-
-static const String extractor(const char *message, const char *key) {
-	String value = "";
-	int valueStart = String(message).indexOf(key) + strlen(key) + 1;
-	int valueEnd = String(message).indexOf("\"", valueStart);
-	value = String(message).substring(valueStart, valueEnd);
-	return value;
+UserMessage::UserMessage(const char *message) : doc(1024) { // assuming max 1024 bytes for the JSON document
+	deserializeJson(doc, message);
 }
 
 const String UserMessage::bicycle_id() {
-	return extractor(this->message, "bicycle_id");
+    return doc["bicycle_id"].as<String>();
 }
 
 const String UserMessage::username() {
-	return extractor(this->message, "username");
+    return doc["username"].as<String>();
 }
 
 const String UserMessage::lang() {
-	return extractor(this->message, "lang");
+    return doc["lang"].as<String>();
 }
 
 const String UserMessage::info() {
-	return extractor(this->message, "info");
+    return doc["info"].as<String>();
 }

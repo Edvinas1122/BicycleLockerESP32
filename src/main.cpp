@@ -15,6 +15,8 @@ void loggingMethod(const char *message) {
 	display.displayText(message);
 }
 
+const char *endpoint = "https://bicycle-share-front-end-git-deviceinterface-edvinas1122.vercel.app/pusher/auth";
+
 void postToPusherEndpoint(
 	WiFiClientSecure &client,
 	HTTPClient &http,
@@ -36,6 +38,35 @@ void postToPusherEndpoint(
 	http.end();
 }
 
+String postToAuthPusherEndpoint(
+	WiFiClientSecure &client,
+	HTTPClient &http,
+	const char *socket_id,
+	const char *channel_name = "ping"
+) {
+	Serial.println("Posting to auth endpoint");
+	Serial.println(socket_id);
+	Serial.println(channel_name);
+
+	http.begin(client, endpoint);
+	http.addHeader("Content-Type", "application/json");
+	http.addHeader("x-password", PUSHER_KEY);
+	String body;
+	body.reserve(50);
+	body += "{\"socket_id\":\"";
+	body += socket_id;
+	body += "\",\"channel_name\":\"";
+	body += channel_name;
+	body += "\"}";
+	const int response_code = http.POST(body);
+	Serial.println(
+		String("POST to server: " + String(response_code)).c_str()
+	);
+	String responseBody = http.getString(); // Get the response body
+	http.end();
+	return responseBody; // Return the response body
+}
+
 void registerHandler(
 	PusherService &service,
 	WiFiClientSecure &client,
@@ -54,6 +85,9 @@ void registerHandler(
 	);
 }
 
+
+size_t counter = 0;
+bool run = false;
 /*
 	https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol/#connection-closure
 */
@@ -64,14 +98,25 @@ void handleNetworkTasks(
 		PUSHER_KEY,
 		PUSHER_CLUSTER
 	);
-    WiFiClientSecure client;
-    HTTPClient http;
+	WiFiClientSecure client;
+	HTTPClient http;
 
 	client.setInsecure();
 
-	lockerService.subscribeToChannel("locker-device");
-	lockerService.registerEventHandler("pusher_internal:subscription_succeeded", [](String& message){
-		Serial.println("Subscription succeeded!");
+	lockerService.subscribeToChannel(
+		"presence-locker-device",
+		[&client, &http](const String& socket_id) -> String {
+		Serial.println("Subscribing to presence-locker-device");
+		String response = postToAuthPusherEndpoint(client, http,
+							socket_id.c_str(), "presence-locker-device");
+		Serial.println(response);
+		// PusherService::Message message(response.c_str());
+		return response;
+	});
+	lockerService.registerEventHandler(
+		"pusher_internal:subscription_succeeded",
+		[](String& message) {
+			Serial.println("Subscription succeeded!");
 	});
 	registerHandler(lockerService, client, http,
 		"ping", "pong",
@@ -80,15 +125,22 @@ void handleNetworkTasks(
 			return String("online");
 		});
 	lockerService.registerEventHandler(
-		"testing",
+		"pusher:error",
+		[](String &message) {
+			Serial.println("pusher:error Triggered");
+			Serial.println(message);
+		}
+	);
+	lockerService.registerEventHandler(
+		"pong",
 		[&http, &client](String &msg) {
-			Serial.println("testing Triggered");
-			loggingMethod(msg.c_str());
+			Serial.print("pong Triggered ");
+			Serial.println(counter++);
 		}
 	);
 
 	int connectionAttempts = 0;
-	while (42) {
+	while (run) {
 		if (lockerService.poll()) {
 			connectionAttempts = 0;
 		} else {
@@ -97,30 +149,32 @@ void handleNetworkTasks(
 				String("Reestablishing connection... in "
 					+ String(connectionAttempts) 
 					+ " seconds").c_str());
-			delay(1000 * connectionAttempts); // should be exponential backoff
+			vTaskDelay(pdMS_TO_TICKS(1000 * connectionAttempts));
 		}
-		delay(500);
+		vTaskDelay(pdMS_TO_TICKS(500));
 	}
 }
 
 TaskHandle_t WebSocketTaskHandle = NULL;
 
 void onConnect() {
-	xTaskCreate(
-		handleNetworkTasks,
-		"WebSocketTask",
-		10000,
-		NULL,
-		1,
-		&WebSocketTaskHandle
-	);
+    // if (WebSocketTaskHandle != NULL) {
+    //     vTaskDelete(WebSocketTaskHandle);
+    //     WebSocketTaskHandle = NULL;
+    // }
+	run = true;
+	// xTaskCreate(
+	// 	handleNetworkTasks,
+	// 	"WebSocketTask",
+	// 	60000,
+	// 	NULL,
+	// 	1,
+	// 	&WebSocketTaskHandle
+	// );
 }
 
 void onDisconnect() {
-    if (WebSocketTaskHandle != NULL) {
-        vTaskDelete(WebSocketTaskHandle);
-        WebSocketTaskHandle = NULL;
-    }
+	run = false;
 }
 
 Network	localNetwork(
@@ -134,12 +188,13 @@ Network	localNetwork(
 
 void setup()
 {
-    Serial.begin(115200);
+	Serial.begin(115200);
 	display.init();
 	localNetwork.init();
 }
 
 void loop()
 {
-
+	// vTaskDelay(portMAX_DELAY);
+	handleNetworkTasks(NULL);
 }
