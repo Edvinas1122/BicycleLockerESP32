@@ -1,4 +1,4 @@
-#include "UserMessage.h"
+#include "dtos/UserMessage.h"
 
 UserMessage::UserMessage(const char *message) : doc(1024) { // assuming max 1024 bytes for the JSON document
 	deserializeJson(doc, message);

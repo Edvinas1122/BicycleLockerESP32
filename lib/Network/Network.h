@@ -4,7 +4,6 @@
 # include <Arduino.h>
 # include <WiFi.h>
 # include <HTTPClient.h>
-# include <ArduinoJson.h>
 # include "esp_wpa2.h"
 
 /*ssid in constructor*/
