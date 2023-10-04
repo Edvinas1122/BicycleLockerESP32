@@ -120,3 +120,34 @@ const bool PusherService::handleConnection() {
 	}
 	return connected;
 }
+
+static const String formMessage(
+	const char *event,
+	const char *channel,
+	const char *data
+) {
+	String message;
+	message.reserve(100);
+	message += "{\"event\":\"";
+	message += event;
+	message += "\",\"channel\":\"";
+	message += channel;
+	message += "\",\"data\":";
+	message += data;
+	message += "}";
+	return message;
+}
+
+void PusherService::sendMessage(
+	const char *event,
+	const char *channel,
+	const char *data
+) {
+	if (connected) {
+		const String message = formMessage(event, channel, data);
+		Serial.println("Sending message: " + message);
+		this->send(message.c_str());
+	} else {
+		Serial.println("Not connected, can't send message");
+	}
+}

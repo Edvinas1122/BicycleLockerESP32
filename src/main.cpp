@@ -85,8 +85,6 @@ void registerHandler(
 	);
 }
 
-
-size_t counter = 0;
 bool run = false;
 /*
 	https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol/#connection-closure
@@ -100,30 +98,36 @@ void handleNetworkTasks(
 	);
 	WiFiClientSecure client;
 	HTTPClient http;
-
+	const char *mainChannel = "presence-locker-device";
 	client.setInsecure();
 
 	lockerService.subscribeToChannel(
-		"presence-locker-device",
+		mainChannel,
 		[&client, &http](const String& socket_id) -> String {
 		Serial.println("Subscribing to presence-locker-device");
 		String response = postToAuthPusherEndpoint(client, http,
 							socket_id.c_str(), "presence-locker-device");
 		Serial.println(response);
-		// PusherService::Message message(response.c_str());
 		return response;
 	});
 	lockerService.registerEventHandler(
 		"pusher_internal:subscription_succeeded",
 		[](String& message) {
-			Serial.println("Subscription succeeded!");
+			Serial.print("Subscription succeeded!");
+			Serial.println(message);
 	});
-	registerHandler(lockerService, client, http,
-		"ping", "pong",
-		[](String &msg) {
-			display.displayText(UserMessage(msg.c_str()).username().c_str());
-			return String("online");
-		});
+	lockerService.registerEventHandler(
+		"pusher_internal:member_added",
+		[](String& message) {
+			Serial.print("Member added!");
+			Serial.println(message);
+	});
+	lockerService.registerEventHandler(
+		"pusher_internal:member_removed",
+		[](String& message) {
+			Serial.print("Member removed!");
+			Serial.println(message);
+	});
 	lockerService.registerEventHandler(
 		"pusher:error",
 		[](String &message) {
@@ -132,12 +136,11 @@ void handleNetworkTasks(
 		}
 	);
 	lockerService.registerEventHandler(
-		"pong",
-		[&http, &client](String &msg) {
-			Serial.print("pong Triggered ");
-			Serial.println(counter++);
-		}
-	);
+		"client-ping",
+		[mainChannel, &lockerService](String& message) {
+			Serial.println(message);
+			lockerService.sendMessage("client-pong", mainChannel, "{\"message\":\"online\"}");
+	});
 
 	int connectionAttempts = 0;
 	while (run) {
@@ -196,5 +199,7 @@ void setup()
 void loop()
 {
 	// vTaskDelay(portMAX_DELAY);
-	handleNetworkTasks(NULL);
+	if (run) {
+		handleNetworkTasks(NULL);
+	}
 }

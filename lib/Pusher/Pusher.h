@@ -28,6 +28,11 @@ class PusherService:
 			const char	*eventKey,
 			MessageCallback callback
 		);
+		void sendMessage(
+			const char *event,
+			const char *channel,
+			const char *data
+		);
 
 	private:
 		String fullUrl;
@@ -63,6 +68,22 @@ class PusherService:
 		// void parseJson();
 		// const websockets::WebsocketsMessage msg;
 	};
+
+	// enum Events {
+	// 	CONNECTION_ESTABLISHED,
+	// 	SUBSCRIPTION_SUCCESS,
+	// 	SUBSCRIPTION_ERROR,
+	// 	SUBSCRIPTION_SUCCEEDED,
+	// 	SUBSCRIPTION_FAILED,
+	// 	SUBSCRIPTION_CANCELLED,
+	// 	MEMBER_ADDED,
+	// 	MEMBER_REMOVED,
+	// 	CLIENT_EVENT,
+	// 	ERROR,
+	// 	UNKNOWN
+	// };
+
+	// static const char *event(Events);
 };
 
 #endif
