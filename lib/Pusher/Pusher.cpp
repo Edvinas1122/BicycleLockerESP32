@@ -54,7 +54,11 @@ void PusherService::subscribeToChannel(
 				Serial.println("Connection established, subscribing to channel: " + message);
 				socket_id = Message(message.c_str()).getItem("socket_id");
 				Serial.println("socket_id: " + socket_id);
-				this->sendSubReq(channel, authCallback(socket_id));
+				try {
+					this->sendSubReq(channel, authCallback(socket_id));
+				} catch (const std::exception& e) {
+					Serial.println("Exception caught: " + String(e.what()));
+				}
 			}
 		);
 	}

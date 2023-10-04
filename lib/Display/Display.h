@@ -19,36 +19,11 @@ class Display {
 		void init();
 		void clear();
 		void displayText(const char *text);
-};
-
-typedef struct SequenceUnit_s {
-	const char *text;
-	int duration;
-} SequenceUnit;
-
-class TextSequence {
+		void printNewLine(const char *text);
+		void resetCursor();
 	private:
-		SequenceUnit *sequence;
-		int sequenceLength;
-		int currentUnit;
-	public:
-		TextSequence(SequenceUnit *sequence, int sequenceLength);
-		SequenceUnit getSequenceUnit();
-};
-
-#include <freertos/FreeRTOS.h>
-
-class DisplayTask {
-	private:
-		Display *display;
-		TextSequence *sequence;
-		TaskHandle_t taskHandle;
-
-	public:
-		DisplayTask(Display *display, TextSequence *sequence);
-		void start();
-		void stop();
-		static void task(void *parameter);
+		uint16_t cursorX;
+		uint16_t cursorY;
 };
 
 #endif
