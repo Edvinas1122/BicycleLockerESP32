@@ -25,21 +25,7 @@ PusherService::PusherService(
 
 PusherService::~PusherService() {}
 
-void PusherService::registerDefaultHandlers()
-{
-	this->registerEventHandler(
-		"pusher_internal:subscription_succeeded",
-		[](const String& message) {
-			Serial.print("Subscription succeeded!");
-	});
-	this->registerEventHandler(
-		"pusher:error",
-		[](const String &message) {
-			Serial.println("pusher:error Triggered");
-			Serial.println(message);
-		}
-	);
-}
+void PusherService::registerDefaultHandlers() {}
 
 static const String generateSubMessage(
 	const char *channel

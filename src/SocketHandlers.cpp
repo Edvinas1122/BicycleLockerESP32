@@ -8,19 +8,33 @@ void registerHandlers(
 	const char *mainChannel
 ) {
 	lockerService.registerEventHandler(
+		subscriptionSucceededEvent,
+		[lockerDisplay](const String& message) {
+		Serial.println("subscriptionSucceededEvent");
+		lockerDisplay->displayText("Online");
+	});
+	lockerService.registerEventHandler(
 		memberAddedEvent,
-		[lockerDisplay, mainChannel](const String& message) {
+		[lockerDisplay](const String& message) {
 			PusherService::Message msg(message.c_str());
 			PusherService::Message user(msg.getItem("user_info").c_str());
 			lockerDisplay->displayText(user.getItem("name").c_str());
 	});
 	lockerService.registerEventHandler(
 		memberRemovedEvent,
-		[lockerDisplay, mainChannel](const String& message) {
+		[lockerDisplay](const String& message) {
 			lockerDisplay->clear();
 	});
 	lockerService.registerEventHandler(
 		"client-ping",
+		[&lockerService, mainChannel](const String& message) {
+			lockerService.sendMessage("client-pong",
+				mainChannel,
+				"{\"message\":\"online\"}"
+			);
+	});
+	lockerService.registerEventHandler(
+		"client-",
 		[&lockerService, mainChannel](const String& message) {
 			lockerService.sendMessage("client-pong",
 				mainChannel,
