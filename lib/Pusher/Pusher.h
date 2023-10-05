@@ -40,8 +40,6 @@ class PusherService:
 			const String &signature = ""
 		);
 		String	socket_id;
-	private:
-		void registerDefaultHandlers();
 };
 
 #endif

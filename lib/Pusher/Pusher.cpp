@@ -20,12 +20,10 @@ PusherService::PusherService(
 ): WebSocketService(getFullUrl(key, cluster), log)
 {
 	this->socket_id.reserve(20);
-	this->registerDefaultHandlers();
 }
 
 PusherService::~PusherService() {}
 
-void PusherService::registerDefaultHandlers() {}
 
 static const String generateSubMessage(
 	const char *channel
