@@ -9,7 +9,8 @@
 /*ssid in constructor*/
 
 /*
-	For enterprise WPA2 networks
+	Read more here, currently using Arduino WiFi library
+	https://docs.espressif.com/projects/esp-idf/en/latest/esp32
 */
 class Network {
 	private:

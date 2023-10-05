@@ -2,7 +2,7 @@
 #include <Display.h>
 #include <Network.h>
 #include "env.h"
-#include "Locker.h"
+#include "LockerService.h"
 #include <Pusher.h>
 #include <HTTPFetch.h>
 
@@ -15,24 +15,23 @@ Network	localNetwork(
 			LOCAL_PASSWORD,
 			[](const char* message) {Serial.print(message);},
 			[]() {run = true;},
-			[]() {run = false;}
+			[]() {run = false; WiFi.disconnect(true);}
 		);
 
-
-PusherService lockerOnlineService(
+PusherService webSocketService(
 	PUSHER_KEY,
 	PUSHER_CLUSTER,
 	[](const char* message) {Serial.print(message);}
 );
 
 void registerHandlers(
-	PusherService &lockerOnlineService,
+	PusherService &webSocketService,
 	Display *display,
 	const char *mainChannel
 );
 void autoSubscribeToChannel(
 	HTTPInterface &interface,
-	PusherService &lockerOnlineService,
+	PusherService &webSocketService,
 	const char *mainChannel
 );
 
@@ -40,6 +39,7 @@ Display display;
 HTTPInterface interface(
 	[](const char* message) {Serial.print(message);}
 );
+LockerService lockerService;
 
 void setup()
 {
@@ -48,11 +48,11 @@ void setup()
 	display.init();
 	autoSubscribeToChannel(
 		interface,
-		lockerOnlineService,
+		webSocketService,
 		mainChannel
 	);
 	registerHandlers(
-		lockerOnlineService,
+		webSocketService,
 		&display,
 		mainChannel
 	);
@@ -65,7 +65,7 @@ uint8_t connectionAttempts = 0;
 void loop()
 {
 	if (run) {
-		if (lockerOnlineService.poll()) {
+		if (webSocketService.poll()) {
 			connectionAttempts = 0;
 		} else {
 			connectionAttempts++;

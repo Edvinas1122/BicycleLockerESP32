@@ -34,30 +34,30 @@ protected:
 	};
 
 private:
-    WiFiClientSecure client;
-    HTTPClient http;
+	WiFiClientSecure client;
+	HTTPClient http;
 	void (*log)(const char *);
 
 public:
-    class Request {
-    public:
-        Request(
+	class Request {
+	public:
+		Request(
 			const String (*getMessage)(const char**),
 			const char** headers,
 			const char* endpoint
 		);
-        const String execute(
+		const String execute(
 			WiFiClientSecure& client,
 			HTTPClient& http,
 			const char** data,
 			void (*log)(const char *)
 		);
 
-    private:
-        const String (*getMessage)(const char**);
-        const char** headers;
+	private:
+		const String (*getMessage)(const char**);
+		const char** headers;
 		const char*	 endpoint;
-    };
+	};
 };
 
 #endif

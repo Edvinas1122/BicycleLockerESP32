@@ -25,6 +25,9 @@ void Network::init() {
 		}
 	});
     
+	/*
+		For enterprise WPA2 networks
+	*/
     esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)username, strlen(username));
     esp_wifi_sta_wpa2_ent_set_username((uint8_t *)username, strlen(username));
     esp_wifi_sta_wpa2_ent_set_password((uint8_t *)password, strlen(password));

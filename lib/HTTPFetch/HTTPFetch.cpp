@@ -19,10 +19,8 @@ const String HTTPInterface::Request::execute(
 	for (int i = 0; headers[i] != nullptr; i++) {
 		http.addHeader(headers[i], headers[++i]);
 	}
-	const int response_code = http.POST(getMessage(data));
-	log(
-		String("POST to server: " + String(response_code)).c_str()
-	);
+	const uint8_t response_code = http.POST(getMessage(data));
+	log("POST request status:"); log(String(response_code).c_str());
 	const String response = http.getString();
 	if (response_code != 200) {
 		throw std::runtime_error(
