@@ -57,7 +57,7 @@ void setup()
 	localNetwork.init();
 }
 
-int connectionAttempts = 0;
+uint8_t connectionAttempts = 0;
 
 void loop()
 {

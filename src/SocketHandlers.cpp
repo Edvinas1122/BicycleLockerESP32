@@ -34,6 +34,10 @@ void registerHandlers(
 	});
 }
 
+
+/*
+	https://pusher.com/docs/channels/server_api/authorizing-users/
+*/
 void autoSubscribeToChannel(
 	HTTPInterface &interface,
 	PusherService &lockerOnlineService,
