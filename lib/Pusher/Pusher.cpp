@@ -15,8 +15,9 @@ static const String getFullUrl(const char *key, const char *cluster) {
 
 PusherService::PusherService(
 	const char *key,
-	const char *cluster
-): WebSocketService(getFullUrl(key, cluster))
+	const char *cluster,
+	void (*log)(const char *)
+): WebSocketService(getFullUrl(key, cluster), log)
 {
 	this->socket_id.reserve(20);
 	this->registerDefaultHandlers();

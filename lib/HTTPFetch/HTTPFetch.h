@@ -14,8 +14,10 @@ public:
     class Request;
 
 public:
-    HTTPInterface(): 
-        client(), http() {
+    HTTPInterface(
+		void (*log)(const char *) = defaultLog
+	): 
+        client(), http(), log(log) {
             client.setInsecure();
     };
 
@@ -23,12 +25,18 @@ public:
 
 	template<const char* RequestName>
 	const String post(const char **data) {
-		return RequestMap<RequestName>::value.execute(client, http, data);
+		return RequestMap<RequestName>::value.execute(client, http, data, log);
+	};
+
+protected:
+	static void defaultLog(const char *message) {
+		(void)message;
 	};
 
 private:
     WiFiClientSecure client;
     HTTPClient http;
+	void (*log)(const char *);
 
 public:
     class Request {
@@ -41,7 +49,8 @@ public:
         const String execute(
 			WiFiClientSecure& client,
 			HTTPClient& http,
-			const char** data
+			const char** data,
+			void (*log)(const char *)
 		);
 
     private:
@@ -50,33 +59,5 @@ public:
 		const char*	 endpoint;
     };
 };
-
-/*
-	To register compile time constant requests, use the following syntax:
-	constexpr char requestAuthorize[] = "authorize";
-
-	const char *endpoint = "your_endpoint_here"
-	template <>
-	struct RequestMap<requestAuthorize> {
-		static HTTPInterface::Request value;
-	};
-
-	extern const char* authReqHeaders[];
-
-	HTTPInterface::Request RequestMap<requestAuthorize>::value = HTTPInterface::Request(
-		[](const char **data) -> const String {
-			String body;
-			body.reserve(100);
-			body += "{\"socket_id\":\"";
-			body += data[0];  // First item
-			body += "\",\"channel_name\":\"";
-			body += data[1];  // Second item
-			body += "\"}";
-			return body;
-		},
-		authReqHeaders,
-		endpoint
-	);
-*/
 
 #endif

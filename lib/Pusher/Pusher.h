@@ -23,7 +23,8 @@ class PusherService:
 	public:
 		PusherService(
 			const char *key,
-			const char *cluster
+			const char *cluster,
+			void (*log)(const char *) = defaultLog
 		);
 		virtual ~PusherService();
 

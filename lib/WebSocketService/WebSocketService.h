@@ -7,9 +7,6 @@
 #include <functional>
 #include <unordered_map>
 
-// template<const char* EventKey>
-// struct EventHandlerMap;
-
 class WebSocketService: public websockets::WebsocketsClient
 {
 	public:
@@ -17,37 +14,30 @@ class WebSocketService: public websockets::WebsocketsClient
 
 	class EventHandler {
 		public:
-			EventHandler(
-				const char *eventKey,
-				MessageCallback callback
-			): eventKey(eventKey), callback(callback), registered(true) {};
-			~EventHandler() {};
-			EventHandler(const EventHandler &other) {
-				this->eventKey = other.eventKey;
-				this->callback = other.callback;
-				this->registered = other.registered;
-			}
-			EventHandler &operator=(const EventHandler &other) {
-				this->eventKey = other.eventKey;
-				this->callback = other.callback;
-				this->registered = other.registered;
-				return *this;
-			}
-			void execute(const String &message);
-			bool isEnabled() const { return registered; }
-			void setCallback(MessageCallback callback) {
-				this->callback = callback;
-			};
+		EventHandler(
+			const char *eventKey,
+			MessageCallback callback
+		);
+		~EventHandler() {};
+		EventHandler(const EventHandler &other);
+		EventHandler &operator=(const EventHandler &other);
 
-			const char *eventKey;
+		void execute(const String &message);
+		bool isEnabled() const;
+		void setCallback(MessageCallback callback);
+
 		private:
-			MessageCallback callback;
-			bool registered;
+		const char *eventKey;
+		MessageCallback callback;
+		bool registered;
 	};
 	typedef std::unordered_map<std::string, EventHandler>::iterator EventHandlerIterator;
 
 	public:
-	WebSocketService(const String &url);
+	WebSocketService(
+		const String &url,
+		void (*log)(const char *) = defaultLog
+	);
 	virtual ~WebSocketService();
 
 	bool poll();
@@ -57,25 +47,16 @@ class WebSocketService: public websockets::WebsocketsClient
 	}
 
 	protected:
-	void useHandleEvent(const char *eventKey, const String &message) {
-		EventHandlerIterator it = eventHandlerMap.find(std::string(eventKey));
-		if (it != eventHandlerMap.end()) {
-			try {
-				it->second.execute(message);
-			} catch (const std::exception &e) {
-				Serial.println("Exception: " + String(e.what()));
-				connected = false;
-			}
-		} else {
-			Serial.println("Unknown event: " + String(eventKey));
-		}
-	}
+	void useHandleEvent(const char *eventKey, const String &message);	
+	static void defaultLog(const char *message);
 
 	private:
 		const String url;
 		bool connected;
 		void setupEventDriver();
 		void handleConnection();
+		void (*log)(const char *);
+
 	private:
         std::unordered_map<std::string, EventHandler> eventHandlerMap;
 	public:
@@ -86,15 +67,11 @@ class WebSocketService: public websockets::WebsocketsClient
 		Message(const char *);
 
 		const String event();
-	
-		// template <typename Format = String>
 		const String message();
 		const String getItem(const char *);
 
 		private:
 		StaticJsonDocument<256> json;
-		// void parseJson();
-		// const websockets::WebsocketsMessage msg;
 	};
 };
 

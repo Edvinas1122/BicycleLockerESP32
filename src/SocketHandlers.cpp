@@ -8,25 +8,20 @@ void registerHandlers(
 	const char *mainChannel
 ) {
 	lockerService.registerEventHandler(
-		"pusher_internal:member_added",
+		memberAddedEvent,
 		[lockerDisplay, mainChannel](const String& message) {
-			Serial.print("Member added!");
-			Serial.println(message);
 			PusherService::Message msg(message.c_str());
 			PusherService::Message user(msg.getItem("user_info").c_str());
 			lockerDisplay->displayText(user.getItem("name").c_str());
 	});
 	lockerService.registerEventHandler(
-		"pusher_internal:member_removed",
+		memberRemovedEvent,
 		[lockerDisplay, mainChannel](const String& message) {
-			Serial.print("Member removed!");
-			Serial.println(message);
 			lockerDisplay->clear();
 	});
 	lockerService.registerEventHandler(
 		"client-ping",
 		[&lockerService, mainChannel](const String& message) {
-			Serial.println(message);
 			lockerService.sendMessage("client-pong",
 				mainChannel,
 				"{\"message\":\"online\"}"
@@ -37,6 +32,10 @@ void registerHandlers(
 
 /*
 	https://pusher.com/docs/channels/server_api/authorizing-users/
+	subs to presence channel as Pusher only allows sending messages on
+	presence and private channels.
+	HTTPInterface is a dependency for an action because,
+	we need to make a request to our web service to get authourization.
 */
 void autoSubscribeToChannel(
 	HTTPInterface &interface,
@@ -46,13 +45,9 @@ void autoSubscribeToChannel(
 	lockerOnlineService.registerEventHandler(
 		connectionEvent,
 		[&interface, &lockerOnlineService, mainChannel](const String& message) {
-			Serial.println("Connection event!");
-			Serial.println(message);
 			lockerOnlineService.socket_id = WebSocketService::Message(message.c_str()).getItem("socket_id");
-			const char *channel = "presence-locker-device";
-			const char* data[] = {lockerOnlineService.socket_id.c_str(), channel, NULL};
+			const char* data[] = {lockerOnlineService.socket_id.c_str(), mainChannel, NULL};
 			const String response = interface.post<requestAuthorize>(data);
-			Serial.println(response);
 			lockerOnlineService.Subscribe(mainChannel, response);
 	});
 }

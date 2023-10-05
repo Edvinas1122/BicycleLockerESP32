@@ -13,7 +13,7 @@ Network	localNetwork(
 			LOCAL_SSID,
 			LOCAL_USER,
 			LOCAL_PASSWORD,
-			[](const char* message) {Serial.println(message);},
+			[](const char* message) {Serial.print(message);},
 			[]() {run = true;},
 			[]() {run = false;}
 		);
@@ -21,7 +21,8 @@ Network	localNetwork(
 
 PusherService lockerOnlineService(
 	PUSHER_KEY,
-	PUSHER_CLUSTER
+	PUSHER_CLUSTER,
+	[](const char* message) {Serial.print(message);}
 );
 
 void registerHandlers(
@@ -36,7 +37,9 @@ void autoSubscribeToChannel(
 );
 
 Display display;
-HTTPInterface interface;
+HTTPInterface interface(
+	[](const char* message) {Serial.print(message);}
+);
 
 void setup()
 {
