@@ -1,3 +1,12 @@
 [submodule "lib/ArduinoWebsockets"]
 	path = lib/ArduinoWebsockets
 	url = https://github.com/gilmaimon/ArduinoWebsockets.git
+
+
+[submodule "lib/WebSocketService"]
+	path = lib/WebSocketService
+	url = https://github.com/Edvinas1122/WebSocketServiceESP32
+
+[submodule "lib/Pusher"]
+	path = lib/Pusher
+	url = https://github.com/Edvinas1122/Pusher-ESP32
