@@ -1,0 +1,19 @@
+{
+	"name": "WebSocketServiceESP32",
+	"version": "0.1.0-alpha",
+	"description": "A Web socket interface wrapper. Uses another library, adds a map",
+	"authors": [
+	  {
+		"name": "Edvinas Momkus",
+		"email": "edvinasmomkus@gmail.com"
+	  }
+	],
+	"repository": {
+	  "type": "git",
+	  "url": "https://github.com/Edvinas1122/WebSocketServiceESP32.git"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"ExternalLibrary": "https://github.com/gilmaimon/ArduinoWebsockets.git"
+	  }
+  }

@@ -26,17 +26,19 @@ void WebSocketService::handleConnection() {
 	log("Connecting to "); log(url.c_str()); log("...\n");
 	connected = this->connect(url);
 	if (connected) {
-		Serial.println("Connected!");
+		log("Connected!");
 	} else {
-		Serial.println("Not Connected!");
+		log("Not Connected!");
 	}
 }
 
+template <class Message = WebSocketService::Message>
 void WebSocketService::setupEventDriver() {
 	this->onMessage([this](websockets::WebsocketsMessage msg){
 		try {
-			const String eventKey = WebSocketService::Message(msg).event();
-			const String message = WebSocketService::Message(msg).message();
+			const String eventKey = Message(msg).event();
+			const String message = Message(msg).message();
+			// const String reducer = Message(msg).reducer();
 			log("Event: "); log(eventKey.c_str()); log(" Message: "); log(message.c_str()); log("\n");
  			useHandleEvent(eventKey.c_str(), message);
 		} catch (const std::exception& e) {
@@ -52,11 +54,11 @@ void WebSocketService::useHandleEvent(const char *eventKey, const String &messag
 		try {
 			it->second.execute(message);
 		} catch (const std::exception &e) {
-			Serial.println("Exception: " + String(e.what()));
+			log("Exception: ");  log(e.what()); log("\n");
 			connected = false;
 		}
 	} else {
-		Serial.println("Unknown event: " + String(eventKey));
+		log("Unknown event: "); log(eventKey); log("\n");
 	}
 }
 
