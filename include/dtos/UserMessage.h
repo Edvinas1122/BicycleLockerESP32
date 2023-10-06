@@ -7,12 +7,12 @@
 class UserMessage {
     public:
         UserMessage(const char *message);
-        const String bicycle_id();
-        const String username();
-        const String lang();
-        const String info();
+        const String bicycle_id() const;
+        const String username() const;
+        const String lang() const;
+        const String info() const;
     private:
-        DynamicJsonDocument doc;
+        StaticJsonDocument<256> doc;
 };
 
 #endif

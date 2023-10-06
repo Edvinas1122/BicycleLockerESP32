@@ -1,45 +1,46 @@
 #include <Display.h>
 #include <Pusher.h>
 #include "FetchFunctions.hpp"
+#include "LockerService.h"
+
+constexpr char openLockerEvent[] = "client-open-locker";
 
 void registerHandlers(
-	PusherService &lockerService,
+	PusherService &webSocketService,
+	LockerService &lockerService,
 	Display *lockerDisplay,
 	const char *mainChannel
 ) {
-	lockerService.registerEventHandler(
+	webSocketService.registerEventHandler(
 		subscriptionSucceededEvent,
 		[lockerDisplay](const String& message) {
-		Serial.println("subscriptionSucceededEvent");
 		lockerDisplay->displayText("Online");
 	});
-	lockerService.registerEventHandler(
+	webSocketService.registerEventHandler(
 		memberAddedEvent,
 		[lockerDisplay](const String& message) {
 			PusherService::Message msg(message.c_str());
 			PusherService::Message user(msg.getItem("user_info").c_str());
 			lockerDisplay->displayText(user.getItem("name").c_str());
 	});
-	lockerService.registerEventHandler(
+	webSocketService.registerEventHandler(
 		memberRemovedEvent,
 		[lockerDisplay](const String& message) {
 			lockerDisplay->clear();
 	});
-	lockerService.registerEventHandler(
+	webSocketService.registerEventHandler(
 		"client-ping",
-		[&lockerService, mainChannel](const String& message) {
-			lockerService.sendMessage("client-pong",
+		[&webSocketService, mainChannel](const String& message) {
+			webSocketService.sendMessage("client-pong",
 				mainChannel,
 				"{\"message\":\"online\"}"
 			);
 	});
-	lockerService.registerEventHandler(
-		"client-",
-		[&lockerService, mainChannel](const String& message) {
-			lockerService.sendMessage("client-pong",
-				mainChannel,
-				"{\"message\":\"online\"}"
-			);
+	webSocketService.registerEventHandler(
+		openLockerEvent,
+		[&webSocketService, &lockerService, mainChannel](const String& message) {
+			PusherService::Message msg(message.c_str());
+			
 	});
 }
 
@@ -59,8 +60,10 @@ void autoSubscribeToChannel(
 	lockerOnlineService.registerEventHandler(
 		connectionEvent,
 		[&interface, &lockerOnlineService, mainChannel](const String& message) {
-			lockerOnlineService.socket_id = WebSocketService::Message(message.c_str()).getItem("socket_id");
-			const char* data[] = {lockerOnlineService.socket_id.c_str(), mainChannel, NULL};
+			lockerOnlineService.socket_id = WebSocketService::Message(message.c_str())
+																	.getItem("socket_id");
+			const char* data[] = {lockerOnlineService.socket_id.c_str(),
+									mainChannel, NULL };
 			const String response = interface.post<requestAuthorize>(data);
 			lockerOnlineService.Subscribe(mainChannel, response);
 	});

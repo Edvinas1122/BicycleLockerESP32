@@ -1,21 +1,21 @@
 #include "dtos/UserMessage.h"
 
-UserMessage::UserMessage(const char *message) : doc(1024) { // assuming max 1024 bytes for the JSON document
+UserMessage::UserMessage(const char *message) {
 	deserializeJson(doc, message);
 }
 
-const String UserMessage::bicycle_id() {
+const String UserMessage::bicycle_id() const {
     return doc["bicycle_id"].as<String>();
 }
 
-const String UserMessage::username() {
+const String UserMessage::username() const {
     return doc["username"].as<String>();
 }
 
-const String UserMessage::lang() {
+const String UserMessage::lang() const {
     return doc["lang"].as<String>();
 }
 
-const String UserMessage::info() {
+const String UserMessage::info() const {
     return doc["info"].as<String>();
 }

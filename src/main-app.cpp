@@ -6,7 +6,6 @@
 #include <Pusher.h>
 #include <HTTPFetch.h>
 
-
 bool run = false;
 
 Network	localNetwork(
@@ -26,6 +25,7 @@ PusherService webSocketService(
 
 void registerHandlers(
 	PusherService &webSocketService,
+	LockerService &lockerService,
 	Display *display,
 	const char *mainChannel
 );
@@ -53,10 +53,10 @@ void setup()
 	);
 	registerHandlers(
 		webSocketService,
+		lockerService,
 		&display,
 		mainChannel
 	);
-	run = false;
 	localNetwork.init();
 }
 
@@ -76,5 +76,6 @@ void loop()
 			delay(1000 * connectionAttempts);
 		}
 	}
-	delay(200);
+	lockerService.poll();
+	delay(150);
 }
