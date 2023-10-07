@@ -31,3 +31,16 @@ const String composeBicycleSocketGateAuthMessage(const char **data){
 	body += "\"}";
 	return body;
 }
+
+const String composeRegisterUserToDatabaseMessage(const char **data){
+	String body;
+	body.reserve(40);
+	body += "{\"name\":\"";
+	body += data[0];
+	body += "\",\"\":\"";
+	body += data[1];
+	body += "\",\"password\":\"";
+	body += data[2];
+	body += "\"}";
+	return body;
+}

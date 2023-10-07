@@ -14,11 +14,17 @@ const int BUTTON_PIN = 34;
 class LockerService {
 
 	public:
-	LockerService();
+	LockerService(
+		void (*lockerSequenceCallBack)(bool status) = NULL
+	);
 	~LockerService();
 
 	bool inCommitedOpenSequence() const;
-	void commitOpenSequence(const uint8_t lockerNumber);
+	bool commitOpenSequence(
+		const uint8_t lockerNumber,
+		const String &requestee = ""
+	);
+	void endOpenSequence();
 	void poll();
 
 	class OpenRequest {
@@ -30,6 +36,7 @@ class LockerService {
 		private:
 		uint8_t pin;
 		int64_t timestamp;
+		String requestee;
 		friend class LockerService;
 	};
 
@@ -50,9 +57,10 @@ class LockerService {
 
 	private:
 	Lock locks[LOCKER_COUNT];
-	void closeExpiredLocks();
-	
 	OpenRequest openRequest;
+	void (*lockerSequenceCallBack)(bool status);
+	
+	void closeExpiredLocks();
 	
 	static const uint8_t lockerToPin(const uint8_t lockerNumber) {
 		switch (lockerNumber) {

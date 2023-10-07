@@ -35,15 +35,31 @@ void autoSubscribeToChannel(
 	const char *mainChannel
 );
 
+
 Display display;
 HTTPInterface interface(
 	[](const char* message) {Serial.print(message);}
 );
+
+std::function<void(bool)> lockerSequenceCallback(
+	PusherService& socket,
+	HTTPInterface& lockerService,
+	const char* mainChannel
+);
+
+const char *mainChannel = "presence-locker-device";
+
 LockerService lockerService;
+// (
+	// &lockerSequenceCallback(
+	// 	webSocketService,
+	// 	interface,
+	// 	mainChannel
+	// )
+// );
 
 void setup()
 {
-	const char *mainChannel = "presence-locker-device";
 	Serial.begin(115200);
 	display.init();
 	autoSubscribeToChannel(

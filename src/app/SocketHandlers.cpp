@@ -4,6 +4,11 @@
 #include "LockerService.h"
 
 constexpr char openLockerEvent[] = "client-open-locker";
+constexpr char questionLockerAvailabilityEvent[] = "client-question-locker-availability";
+
+static const String getLockerMessage(bool available) {
+	return String("{\"message\":") + (available ? "begin" : "false") + "}";
+}
 
 void registerHandlers(
 	PusherService &webSocketService,
@@ -40,7 +45,15 @@ void registerHandlers(
 		openLockerEvent,
 		[&webSocketService, &lockerService, mainChannel](const String& message) {
 			PusherService::Message msg(message.c_str());
-			
+			bool commenced = lockerService.commitOpenSequence(
+				atoi(msg.getItem("locker_id").c_str()),
+				""
+			);
+			webSocketService.sendMessage(
+				"client-open-locker",
+				mainChannel,
+				getLockerMessage(commenced).c_str()
+			);
 	});
 }
 
@@ -67,4 +80,22 @@ void autoSubscribeToChannel(
 			const String response = interface.post<requestAuthorize>(data);
 			lockerOnlineService.Subscribe(mainChannel, response);
 	});
+}
+
+/*
+	A callback for when an unlock sequence is completed.
+*/
+std::function<void(bool)> lockerSequenceCallback(
+	PusherService& socket,
+	HTTPInterface& fetcher,
+	const char* mainChannel
+) {
+	return [&socket, &fetcher, mainChannel](bool unlocked) {
+		socket.sendMessage(
+			openLockerEvent,
+			mainChannel,
+			getLockerMessage(unlocked).c_str()
+		);
+		// fetcher.post<requestLockerStatus>();
+	};
 }
