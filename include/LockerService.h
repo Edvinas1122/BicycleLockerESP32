@@ -15,7 +15,9 @@ class LockerService {
 
 	public:
 
-	typedef std::function<void(bool)> LockerSequenceCallBack;
+	typedef std::function<void(
+		bool, const String&, const String&, const String&
+	)> LockerSequenceCallBack;
 
 	public:
 	LockerService(
@@ -26,7 +28,8 @@ class LockerService {
 	bool inCommitedOpenSequence() const;
 	bool commitOpenSequence(
 		const uint8_t lockerNumber,
-		const String &requestee = ""
+		const String &requestee = "",
+		const String &duration = ""
 	);
 	void endOpenSequence();
 	void poll();
@@ -42,6 +45,7 @@ class LockerService {
 		uint8_t pin;
 		int64_t timestamp;
 		String requestee;
+		String duration;
 		friend class LockerService;
 	};
 

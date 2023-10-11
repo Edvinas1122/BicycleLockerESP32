@@ -32,15 +32,25 @@ const String composeBicycleSocketGateAuthMessage(const char **data){
 	return body;
 }
 
+
+
+/*
+	// provide api:
+		"user_id",
+		"bicycle_id" = "locker_id",
+		"duration"
+*/
 const String composeRegisterUserToDatabaseMessage(const char **data){
 	String body;
 	body.reserve(40);
-	body += "{\"name\":\"";
+	body += "{\"user_id\":\"";
 	body += data[0];
 	body += "\",\"\":\"";
 	body += data[1];
-	body += "\",\"password\":\"";
+	body += "\",\"bicycle_id\":\"";
 	body += data[2];
+	body += "\",\"duration\":\"";
+	body += data[3];
 	body += "\"}";
 	return body;
 }

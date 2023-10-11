@@ -62,16 +62,20 @@ void registerHandlers(
 	});
 	webSocketService.registerEventHandler(
 		openLockerEvent,
-		[&webSocketService, &lockerService, mainChannel](const String& message) {
+		[&webSocketService, &lockerService, mainChannel, lockerDisplay](const String& message) {
 			PusherService::Message msg(message.c_str());
 			bool commenced = lockerService.commitOpenSequence(
 				atoi(msg.getItem("locker_id").c_str()),
-				""
+				msg.user_id(),
+				msg.getItem("duration")
 			);
 			webSocketService.sendMessage(
 				"client-open-locker",
 				mainChannel,
 				getSequenceMessage(commenced).c_str()
+			);
+			lockerDisplay->displayText(
+				"Press button to open locker"
 			);
 	});
 }
@@ -85,19 +89,19 @@ void registerHandlers(
 	we need to make a request to our web service to get authourization.
 */
 void autoSubscribeToChannel(
-	HTTPInterface &interface,
+	HTTPInterface &fetcher,
 	PusherService &lockerOnlineService,
 	Display *display,
 	const char *mainChannel
 ) {
 	lockerOnlineService.registerEventHandler(
 		connectionEvent,
-		[&interface, &lockerOnlineService, mainChannel, display](const String& message) {
+		[&fetcher, &lockerOnlineService, mainChannel, display](const String& message) {
 			lockerOnlineService.socket_id = WebSocketService::Message(message.c_str())
 																	.getItem("socket_id");
 			const char* data[] = {lockerOnlineService.socket_id.c_str(),
 									mainChannel, NULL };
-			const String response = interface.post<requestAuthorize>(data);
+			const String response = fetcher.post<requestAuthorize>(data);
 			lockerOnlineService.Subscribe(mainChannel, response);
 			display->displayText("Pusher Service Connected");
 	});
@@ -113,20 +117,39 @@ const String SequenceReportDisplay(const bool unlocked) {
 }
 /*
 	A callback for when an unlock sequence is completed.
+	// provide api:
+		"user_id",
+		"bicycle_id" = "locker_id",
+		"duration"
 */
-std::function<void(bool)> lockerSequenceCallback(
+LockerService::LockerSequenceCallBack lockerSequenceCallback(
 	PusherService& socket,
 	HTTPInterface& fetcher,
 	Display* display,
 	const char* mainChannel
 ) {
-	return [&socket, &fetcher, mainChannel, display](const bool unlocked) {
+	return [&socket, &fetcher, mainChannel, display](
+		const bool unlocked,
+		const String& requestee,
+		const String& lockerId,
+		const String& duration
+	) {
 		socket.sendMessage(
 			openLockerEvent,
 			mainChannel,
 			SequenceReport(unlocked).c_str()
 		);
 		display->displayText(SequenceReportDisplay(unlocked).c_str());
-		// fetcher.post<requestLockerStatus>();
+		if (!unlocked) return;
+		const char* data[] = {
+			requestee.c_str(),
+			lockerId.c_str(),
+			duration.c_str(),
+			NULL
+		};
+		fetcher.post<updateDatabase>(data);
+		display->displayText(
+			actionDisplay(requestee, " locker is open").c_str()
+		);
 	};
 }

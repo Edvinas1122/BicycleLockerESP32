@@ -54,14 +54,14 @@ HTTPInterface interface(
 	A method after once the button is pressed in 
 	a commenced sequence
 */
-std::function<void(bool)> lockerSequenceCallback(
+LockerService::LockerSequenceCallBack lockerSequenceCallback(
 	PusherService& socket,
 	HTTPInterface& lockerService,
 	Display* display,
 	const char* mainChannel
 );
 
-std::function<void(bool)> callback = lockerSequenceCallback(
+LockerService::LockerSequenceCallBack callback = lockerSequenceCallback(
 	webSocketService,
 	interface,
 	&display,

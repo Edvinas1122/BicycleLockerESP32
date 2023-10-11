@@ -43,12 +43,14 @@ void LockerService::endOpenSequence() {
 */
 bool LockerService::commitOpenSequence(
 	const uint8_t lockerNumber,
-	const String &requestee
+	const String &requestee,
+	const String &duration
 ) {
 	if (!inCommitedOpenSequence()) {
 		openRequest.pin = lockerToPin(lockerNumber);
 		openRequest.timestamp = xx_time_get_time();
 		openRequest.requestee = requestee;
+		openRequest.duration = duration;
 		return true;
 	} else {
 		return false;
@@ -79,7 +81,12 @@ void LockerService::poll() {
 	if (isButtonPressed() && inCommitedOpenSequence()) {
 		locks[openRequest.pin].open();
 		openRequest.timestamp = 0;
-		buttonPressCallback(true);
+		buttonPressCallback(
+			true,
+			openRequest.requestee,
+			String(locks[openRequest.pin].pin),
+			openRequest.duration
+		);
 	}
 	closeExpiredLocks();
 }
