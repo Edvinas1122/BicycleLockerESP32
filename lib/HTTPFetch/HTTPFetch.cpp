@@ -11,10 +11,10 @@ HTTPInterface::Request::Request(
 
 const String HTTPInterface::Request::execute(
 	WiFiClientSecure &client,
-	HTTPClient &http,
 	const char **data,
 	void (*log)(const char *)
 ) {
+	HTTPClient http;
 	http.begin(client, endpoint);
 	for (int i = 0; headers[i] != nullptr; i++) {
 		http.addHeader(headers[i], headers[++i]);

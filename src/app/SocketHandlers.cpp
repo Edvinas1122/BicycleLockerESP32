@@ -7,7 +7,7 @@ constexpr char openLockerEvent[] = "client-open-locker";
 constexpr char questionLockerAvailabilityEvent[] = "client-question-locker-availability";
 
 static const String getSequenceMessage(bool available) {
-	return String("{\"message\":") + (available ? "begin" : "false") + "}";
+	return String("{\"message\":") + (available ? "\"begin\"" : "\"false\"") + "}";
 }
 
 const String actionDisplay(const String &requestee, const char *action) {
@@ -105,7 +105,7 @@ void autoSubscribeToChannel(
 
 
 const String SequenceReport(const bool unlocked) {
-	return String("{\"message\":") + (unlocked ? "unlocked" : "timedout") + "}";
+	return String("{\"message\":") + (unlocked ? "\"unlocked\"" : "\"timedout\"") + "}";
 }
 
 const String SequenceReportDisplay(const bool unlocked) {

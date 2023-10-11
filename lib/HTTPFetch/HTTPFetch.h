@@ -17,7 +17,7 @@ public:
     HTTPInterface(
 		void (*log)(const char *) = defaultLog
 	): 
-        client(), http(), log(log) {
+        client(), log(log) {
             client.setInsecure();
     };
 
@@ -25,7 +25,7 @@ public:
 
 	template<const char* RequestName>
 	const String post(const char **data) {
-		return RequestMap<RequestName>::value.execute(client, http, data, log);
+		return RequestMap<RequestName>::value.execute(client, data, log);
 	};
 
 protected:
@@ -35,7 +35,6 @@ protected:
 
 private:
 	WiFiClientSecure client;
-	HTTPClient http;
 	void (*log)(const char *);
 
 public:
@@ -48,7 +47,6 @@ public:
 		);
 		const String execute(
 			WiFiClientSecure& client,
-			HTTPClient& http,
 			const char** data,
 			void (*log)(const char *)
 		);
