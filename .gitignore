@@ -3,8 +3,12 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+.vscode/*
+.vscode/
 env.txt
 objects/
 objects/*
 trash/
 trash/*
+*.sh
+test_locker

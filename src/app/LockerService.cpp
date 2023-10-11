@@ -73,7 +73,7 @@ bool LockerService::isButtonPressed() {
 	32ms block
 */
 void LockerService::poll() {
-	Serial.println(xx_time_get_time());
+	// Serial.println(xx_time_get_time());
 	if (isButtonPressed() && inCommitedOpenSequence()) {
 		locks[openRequest.pin].open();
 		openRequest.timestamp = 0;

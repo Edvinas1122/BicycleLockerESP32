@@ -6,15 +6,24 @@
 #include <Pusher.h>
 #include <HTTPFetch.h>
 
-bool run = false;
 
+Display display;
+
+bool run = false;
 Network	localNetwork(
 			LOCAL_SSID,
 			LOCAL_USER,
 			LOCAL_PASSWORD,
 			[](const char* message) {Serial.print(message);},
-			[]() {run = true;},
-			[]() {run = false; WiFi.disconnect(true);}
+			[]() {
+				run = true;
+				display.displayText("Have established connection.");
+			},
+			[]() {
+				run = false;
+				WiFi.disconnect(true);
+				display.displayText("Not connected.");
+			}
 		);
 
 PusherService webSocketService(
@@ -36,7 +45,6 @@ void autoSubscribeToChannel(
 );
 
 
-Display display;
 HTTPInterface interface(
 	[](const char* message) {Serial.print(message);}
 );

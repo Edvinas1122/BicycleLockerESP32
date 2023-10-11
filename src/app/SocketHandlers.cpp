@@ -6,8 +6,12 @@
 constexpr char openLockerEvent[] = "client-open-locker";
 constexpr char questionLockerAvailabilityEvent[] = "client-question-locker-availability";
 
-static const String getLockerMessage(bool available) {
+static const String getSequenceMessage(bool available) {
 	return String("{\"message\":") + (available ? "begin" : "false") + "}";
+}
+
+const String actionDisplay(const String &requestee, const char *action) {
+	return String(requestee + action);
 }
 
 void registerHandlers(
@@ -26,12 +30,27 @@ void registerHandlers(
 		[lockerDisplay](const String& message) {
 			PusherService::Message msg(message.c_str());
 			PusherService::Message user(msg.getItem("user_info").c_str());
-			lockerDisplay->displayText(user.getItem("name").c_str());
+			lockerDisplay
+				->displayText(
+					actionDisplay(
+						user.getItem("name").c_str(),
+						" is present"
+					).c_str()
+				);
 	});
 	webSocketService.registerEventHandler(
 		memberRemovedEvent,
 		[lockerDisplay](const String& message) {
-			lockerDisplay->clear();
+			PusherService::Message msg(message.c_str());
+			PusherService::Message user(msg.getItem("user_info").c_str());
+			lockerDisplay
+				->displayText(
+					actionDisplay(
+						user.getItem("name").c_str(),
+						" has left"
+					).c_str()
+				);
+
 	});
 	webSocketService.registerEventHandler(
 		"client-ping",
@@ -52,7 +71,7 @@ void registerHandlers(
 			webSocketService.sendMessage(
 				"client-open-locker",
 				mainChannel,
-				getLockerMessage(commenced).c_str()
+				getSequenceMessage(commenced).c_str()
 			);
 	});
 }
@@ -68,34 +87,46 @@ void registerHandlers(
 void autoSubscribeToChannel(
 	HTTPInterface &interface,
 	PusherService &lockerOnlineService,
+	Display *display,
 	const char *mainChannel
 ) {
 	lockerOnlineService.registerEventHandler(
 		connectionEvent,
-		[&interface, &lockerOnlineService, mainChannel](const String& message) {
+		[&interface, &lockerOnlineService, mainChannel, display](const String& message) {
 			lockerOnlineService.socket_id = WebSocketService::Message(message.c_str())
 																	.getItem("socket_id");
 			const char* data[] = {lockerOnlineService.socket_id.c_str(),
 									mainChannel, NULL };
 			const String response = interface.post<requestAuthorize>(data);
 			lockerOnlineService.Subscribe(mainChannel, response);
+			display->displayText("Pusher Service Connected");
 	});
 }
 
+
+const String SequenceReport(const bool unlocked) {
+	return String("{\"message\":") + (unlocked ? "unlocked" : "timedout") + "}";
+}
+
+const String SequenceReportDisplay(const bool unlocked) {
+	return String("Locker ") + (unlocked ? "unlocked" : "timedout");
+}
 /*
 	A callback for when an unlock sequence is completed.
 */
 std::function<void(bool)> lockerSequenceCallback(
 	PusherService& socket,
 	HTTPInterface& fetcher,
+	Display* display,
 	const char* mainChannel
 ) {
-	return [&socket, &fetcher, mainChannel](bool unlocked) {
+	return [&socket, &fetcher, mainChannel, &display](const bool unlocked) {
 		socket.sendMessage(
 			openLockerEvent,
 			mainChannel,
-			getLockerMessage(unlocked).c_str()
+			SequenceReport(unlocked).c_str()
 		);
+		display->displayText(SequenceReportDisplay(unlocked).c_str());
 		// fetcher.post<requestLockerStatus>();
 	};
 }
