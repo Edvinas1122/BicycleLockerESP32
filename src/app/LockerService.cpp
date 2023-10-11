@@ -5,16 +5,16 @@ LockerService::LockerService(
 ) :
 	openRequest(),
 	locks({
+		Lock(2),
 		Lock(4),
 		Lock(5),
-		Lock(6),
-		Lock(7),
-		Lock(8),
-		Lock(9),
-		Lock(10),
-		Lock(11),
-		Lock(12),
-		Lock(13)
+		Lock(13),
+		Lock(14),
+		Lock(15),
+		Lock(16),
+		Lock(17),
+		Lock(18),
+		Lock(19)
 	})
 {
 	this->buttonPressCallback = callback;

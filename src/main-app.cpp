@@ -78,6 +78,7 @@ void setup()
 {
 	Serial.begin(115200);
 	display.init();
+	lockerService.init();
 	autoSubscribeToChannel(
 		interface,
 		webSocketService,

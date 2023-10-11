@@ -120,7 +120,7 @@ std::function<void(bool)> lockerSequenceCallback(
 	Display* display,
 	const char* mainChannel
 ) {
-	return [&socket, &fetcher, mainChannel, &display](const bool unlocked) {
+	return [&socket, &fetcher, mainChannel, display](const bool unlocked) {
 		socket.sendMessage(
 			openLockerEvent,
 			mainChannel,
