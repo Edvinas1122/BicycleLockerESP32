@@ -14,8 +14,12 @@ const int BUTTON_PIN = 34;
 class LockerService {
 
 	public:
+
+	typedef std::function<void(bool)> LockerSequenceCallBack;
+
+	public:
 	LockerService(
-		void (*lockerSequenceCallBack)(bool status) = NULL
+		LockerSequenceCallBack callback = NULL
 	);
 	~LockerService();
 
@@ -58,7 +62,7 @@ class LockerService {
 	private:
 	Lock locks[LOCKER_COUNT];
 	OpenRequest openRequest;
-	void (*lockerSequenceCallBack)(bool status);
+	LockerSequenceCallBack callback;
 	
 	void closeExpiredLocks();
 	

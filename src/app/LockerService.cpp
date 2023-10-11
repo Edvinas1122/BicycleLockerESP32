@@ -1,7 +1,7 @@
 #include "LockerService.h"
 
 LockerService::LockerService(
-	void (*lockerSequenceCallBack)(bool status) /* = NULL */
+	LockerSequenceCallBack callback /* = NULL */
 ) :
 	openRequest(),
 	locks({
@@ -16,7 +16,7 @@ LockerService::LockerService(
 		Lock(12),
 		Lock(13)
 	}),
-	lockerSequenceCallBack(lockerSequenceCallBack)
+	callback(callback)
 {}
 
 LockerService::~LockerService() {}
@@ -77,7 +77,7 @@ void LockerService::poll() {
 	if (isButtonPressed() && inCommitedOpenSequence()) {
 		locks[openRequest.pin].open();
 		openRequest.timestamp = 0;
-		lockerSequenceCallBack(true);
+		callback(true);
 	}
 	closeExpiredLocks();
 }

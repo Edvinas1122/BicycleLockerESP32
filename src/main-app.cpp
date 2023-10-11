@@ -50,6 +50,10 @@ HTTPInterface interface(
 	[](const char* message) {Serial.print(message);}
 );
 
+/*
+	A method after once the button is pressed in 
+	a commenced sequence
+*/
 std::function<void(bool)> lockerSequenceCallback(
 	PusherService& socket,
 	HTTPInterface& lockerService,
@@ -57,9 +61,18 @@ std::function<void(bool)> lockerSequenceCallback(
 	const char* mainChannel
 );
 
+std::function<void(bool)> callback = lockerSequenceCallback(
+	webSocketService,
+	interface,
+	&display,
+	"presence-locker-device"
+);
+
 const char *mainChannel = "presence-locker-device";
 
-LockerService lockerService;
+LockerService lockerService(
+	callback
+);
 
 void setup()
 {
@@ -90,7 +103,7 @@ void loop()
 		} else {
 			connectionAttempts++;
 			display.displayText(
-				String("Reestablishing connection... in "
+				String("Pusher reconnecting... in "
 					+ String(connectionAttempts) 
 					+ " seconds").c_str());
 			delay(1000 * connectionAttempts);
