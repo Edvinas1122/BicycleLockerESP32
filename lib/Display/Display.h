@@ -16,6 +16,7 @@ class Display {
 
 	public:
 		Display();
+		virtual ~Display();
 		void init();
 		void clear();
 		void displayText(const char *text);

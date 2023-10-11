@@ -6,6 +6,11 @@ Display::Display():
 	cursorY(0)
 {}
 
+Display::~Display() {
+	display.clearDisplay();
+	display.display();
+}
+
 void Display::init() {
 	if(!display.begin(SSD1306_SWITCHCAPVCC, OLED_PIN)) {
 		Serial.println(F("SSD1306 allocation failed"));
