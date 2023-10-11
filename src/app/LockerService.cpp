@@ -15,18 +15,20 @@ LockerService::LockerService(
 		Lock(11),
 		Lock(12),
 		Lock(13)
-	}),
-	callback(callback)
-{}
+	})
+{
+	this->buttonPressCallback = callback;
+}
 
 LockerService::~LockerService() {}
 
-// void LockerService::init() {
-// 	for (uint8_t i = 0; i < LOCKER_COUNT; i++) {
-// 		pinMode(locks[i].pin, OUTPUT);
-// 		digitalWrite(locks[i].pin, LOW);
-// 	}
-// }
+void LockerService::init() {
+	for (uint8_t i = 0; i < LOCKER_COUNT; i++) {
+		pinMode(locks[i].pin, OUTPUT);
+		digitalWrite(locks[i].pin, LOW);
+		locks[i].timestamp = 0;
+	}
+}
 
 bool LockerService::inCommitedOpenSequence() const {
 	return !openRequest.isExpired();
@@ -77,7 +79,7 @@ void LockerService::poll() {
 	if (isButtonPressed() && inCommitedOpenSequence()) {
 		locks[openRequest.pin].open();
 		openRequest.timestamp = 0;
-		callback(true);
+		buttonPressCallback(true);
 	}
 	closeExpiredLocks();
 }
@@ -116,7 +118,7 @@ LockerService::Lock::Lock(const uint8_t pin):
 	pin(pin), timestamp(0) {}
 
 void LockerService::Lock::open() {
-	digitalWrite(pin, HIGH);
+	// digitalWrite(pin, HIGH);
 	timestamp = xx_time_get_time();
 	Serial.print("open ");
 	Serial.println(pin);

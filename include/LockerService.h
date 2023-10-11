@@ -30,6 +30,7 @@ class LockerService {
 	);
 	void endOpenSequence();
 	void poll();
+	void init();
 
 	class OpenRequest {
 		OpenRequest();
@@ -62,7 +63,7 @@ class LockerService {
 	private:
 	Lock locks[LOCKER_COUNT];
 	OpenRequest openRequest;
-	LockerSequenceCallBack callback;
+	LockerSequenceCallBack buttonPressCallback;
 	
 	void closeExpiredLocks();
 	
