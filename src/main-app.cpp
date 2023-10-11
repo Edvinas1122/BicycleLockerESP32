@@ -41,6 +41,7 @@ void registerHandlers(
 void autoSubscribeToChannel(
 	HTTPInterface &interface,
 	PusherService &webSocketService,
+	Display *display,
 	const char *mainChannel
 );
 
@@ -52,19 +53,13 @@ HTTPInterface interface(
 std::function<void(bool)> lockerSequenceCallback(
 	PusherService& socket,
 	HTTPInterface& lockerService,
+	Display* display,
 	const char* mainChannel
 );
 
 const char *mainChannel = "presence-locker-device";
 
 LockerService lockerService;
-// (
-	// &lockerSequenceCallback(
-	// 	webSocketService,
-	// 	interface,
-	// 	mainChannel
-	// )
-// );
 
 void setup()
 {
@@ -73,6 +68,7 @@ void setup()
 	autoSubscribeToChannel(
 		interface,
 		webSocketService,
+		&display,
 		mainChannel
 	);
 	registerHandlers(
