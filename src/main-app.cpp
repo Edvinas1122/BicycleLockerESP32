@@ -17,12 +17,12 @@ Network	localNetwork(
 			[](const char* message) {Serial.print(message);},
 			[]() {
 				run = true;
-				display.displayText("Have established connection.");
+				display.message("Have established connection.", 3);
 			},
 			[]() {
 				run = false;
 				WiFi.disconnect(true);
-				display.displayText("Not connected.");
+				display.const_message("Not connected.");
 			}
 		);
 
@@ -54,19 +54,23 @@ HTTPInterface interface(
 	A method after once the button is pressed in 
 	a commenced sequence
 */
-LockerService::LockerSequenceCallBack lockerSequenceCallback(
-	PusherService& socket,
-	HTTPInterface& lockerService,
-	Display* display,
-	const char* mainChannel
-);
+LockerService
+	::LockerSequenceCallBack 
+		lockerSequenceCallback(
+			PusherService& socket,
+			HTTPInterface& lockerService,
+			Display* display,
+			const char* mainChannel
+		);
 
-LockerService::LockerSequenceCallBack callback = lockerSequenceCallback(
-	webSocketService,
-	interface,
-	&display,
-	"presence-locker-device"
-);
+LockerService
+	::LockerSequenceCallBack callback
+		= lockerSequenceCallback(
+			webSocketService,
+			interface,
+			&display,
+			"presence-locker-device"
+		);
 
 const char *mainChannel = "presence-locker-device";
 
@@ -78,6 +82,7 @@ void setup()
 {
 	Serial.begin(115200);
 	display.init();
+	display.const_message("Connecting...");
 	lockerService.init();
 	autoSubscribeToChannel(
 		interface,
@@ -103,7 +108,7 @@ void loop()
 			connectionAttempts = 0;
 		} else {
 			connectionAttempts++;
-			display.displayText(
+			display.const_message(
 				String("Pusher reconnecting... in "
 					+ String(connectionAttempts) 
 					+ " seconds").c_str());
@@ -111,5 +116,6 @@ void loop()
 		}
 	}
 	lockerService.poll();
+	display.poll();
 	delay(150);
 }

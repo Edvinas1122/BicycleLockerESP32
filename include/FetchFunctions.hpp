@@ -9,9 +9,11 @@
     with data phrasing functions "lets readjust data"
 */
 extern const char *endpoint;
+extern const char *endpoint_db;
 
 constexpr char requestAuthorize[] = "authorize";
 constexpr char updateDatabase[] = "update_database";
+// constexpr char updateDatabase[] = "";
 
 template <>
 struct RequestMap<requestAuthorize> {
@@ -40,7 +42,7 @@ const String composeRegisterUserToDatabaseMessage(const char **data);
 HTTPInterface::Request RequestMap<updateDatabase>::value = HTTPInterface::Request(
 	composeRegisterUserToDatabaseMessage,
 	authReqHeaders,
-	endpoint
+	endpoint_db
 );
 
 #endif

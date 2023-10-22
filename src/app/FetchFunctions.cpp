@@ -25,14 +25,14 @@ const String composeBicycleSocketGateAuthMessage(const char **data){
 	String body;
 	body.reserve(40);
 	body += "{\"socket_id\":\"";
-	body += data[0];  // First item
+	body += data[0];
 	body += "\",\"channel_name\":\"";
-	body += data[1];  // Second item
+	body += data[1];
 	body += "\"}";
 	return body;
 }
 
-
+const char *endpoint_db = UPDATE_DB_ENDPOINT;
 
 /*
 	// provide api:
@@ -41,16 +41,19 @@ const String composeBicycleSocketGateAuthMessage(const char **data){
 		"duration"
 */
 const String composeRegisterUserToDatabaseMessage(const char **data){
-	String body;
-	body.reserve(40);
-	body += "{\"user_id\":\"";
-	body += data[0];
-	body += "\",\"\":\"";
-	body += data[1];
-	body += "\",\"bicycle_id\":\"";
-	body += data[2];
-	body += "\",\"duration\":\"";
-	body += data[3];
-	body += "\"}";
-	return body;
+    String body;
+    body.reserve(50);
+    body += "{\"purpose\":\"";
+    body += data[0];
+    body += "\",\"user_id\":";
+    body += data[1];
+    body += ",\"bicycle_id\":";
+    body += data[2];
+    if (data[3] != NULL) {
+        body += ",\"duration\":\"";
+        body += data[3];
+        body += "\"";
+    }
+    body += "}";
+    return body;
 }

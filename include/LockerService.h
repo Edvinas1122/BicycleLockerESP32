@@ -16,7 +16,7 @@ class LockerService {
 	public:
 
 	typedef std::function<void(
-		bool, const String&, const String&, const String&
+		bool, const String&, const String&, const String&, const String&
 	)> LockerSequenceCallBack;
 
 	public:
@@ -28,24 +28,36 @@ class LockerService {
 	bool inCommitedOpenSequence() const;
 	bool commitOpenSequence(
 		const uint8_t lockerNumber,
-		const String &requestee = "",
+		const String &purpose,
+		const String &requestee,
 		const String &duration = ""
 	);
 	void endOpenSequence();
 	void poll();
 	void init();
+	bool requestCancelPermit(
+		const String &requestee
+	);
 
 	class OpenRequest {
 		OpenRequest();
 		~OpenRequest() {};
 
 		bool isExpired() const;
+		void set(
+			const uint8_t pin,
+			const int64_t timestamp,
+			const String &requestee,
+			const String &duration,
+			const String &purpose
+		);
 
 		private:
 		uint8_t pin;
 		int64_t timestamp;
 		String requestee;
 		String duration;
+		String purpose;
 		friend class LockerService;
 	};
 
@@ -71,20 +83,6 @@ class LockerService {
 	
 	void closeExpiredLocks();
 	
-	static const uint8_t lockerToPin(const uint8_t lockerNumber) {
-		switch (lockerNumber) {
-			case 1:
-				return 4;
-			case 2:
-				return 5;
-			case 3:
-				return 6;
-			case 4:
-				return 7;
-			default:
-				return 0;
-		};
-	}
 	static int64_t xx_time_get_time();
 
 };

@@ -43,14 +43,30 @@ void LockerService::endOpenSequence() {
 */
 bool LockerService::commitOpenSequence(
 	const uint8_t lockerNumber,
+	const String &purpose,
 	const String &requestee,
-	const String &duration
+	const String &duration /* = "" */
 ) {
 	if (!inCommitedOpenSequence()) {
-		openRequest.pin = lockerToPin(lockerNumber);
-		openRequest.timestamp = xx_time_get_time();
-		openRequest.requestee = requestee;
-		openRequest.duration = duration;
+		openRequest.set(
+			lockerNumber,
+			xx_time_get_time(),
+			requestee,
+			duration,
+			purpose
+		);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool LockerService::requestCancelPermit(
+	const String &requestee
+) {
+	if (inCommitedOpenSequence() &&
+		openRequest.requestee == requestee)
+	{
 		return true;
 	} else {
 		return false;
@@ -79,14 +95,15 @@ bool LockerService::isButtonPressed() {
 void LockerService::poll() {
 	// Serial.println(xx_time_get_time());
 	if (isButtonPressed() && inCommitedOpenSequence()) {
-		locks[openRequest.pin].open();
 		openRequest.timestamp = 0;
 		buttonPressCallback(
 			true,
 			openRequest.requestee,
-			String(locks[openRequest.pin].pin),
+			openRequest.purpose,
+			String(openRequest.pin),
 			openRequest.duration
 		);
+		locks[openRequest.pin].open();
 	}
 	closeExpiredLocks();
 }
@@ -118,7 +135,22 @@ bool LockerService::OpenRequest::isExpired() const {
 	Serial.print("isExpired ");
 	Serial.println(timestamp);
 	Serial.println(xx_time_get_time() - timestamp);
+	Serial.println(((xx_time_get_time() - timestamp) > EXPIRATION_TIME_OF_REQUEST));
 	return (((xx_time_get_time() - timestamp) > EXPIRATION_TIME_OF_REQUEST));
+}
+
+void LockerService::OpenRequest::set(
+	const uint8_t pin,
+	const int64_t timestamp,
+	const String &requestee,
+	const String &duration,
+	const String &purpose
+) {
+	this->pin = pin;
+	this->timestamp = timestamp;
+	this->requestee = requestee;
+	this->duration = duration;
+	this->purpose = purpose;
 }
 
 LockerService::Lock::Lock(const uint8_t pin):

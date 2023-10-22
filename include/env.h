@@ -20,4 +20,8 @@
 #  define BICYCLE_API_ENDPOINT ""
 # endif
 
+# ifndef UPDATE_DB_ENDPOINT
+#  define UPDATE_DB_ENDPOINT ""
+# endif
+
 #endif

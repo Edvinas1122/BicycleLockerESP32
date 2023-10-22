@@ -7,23 +7,48 @@ constexpr char openLockerEvent[] = "client-open-locker";
 constexpr char questionLockerAvailabilityEvent[] = "client-question-locker-availability";
 
 static const String getSequenceMessage(bool available) {
-	return String("{\"message\":") + (available ? "\"begin\"" : "\"false\"") + "}";
+	return String(available ? "\"begin\"" : "\"false\"");
 }
 
 const String actionDisplay(const String &requestee, const char *action) {
 	return String(requestee + action);
 }
 
+static void sequenceTimerDisplay(
+	Display *lockerDisplay
+) {
+	int timeLeft = 10;
+	lockerDisplay->message(
+		"Press button to open locker: ",
+		10
+	);
+	// while (timeLeft > 0) {
+	// 	lockerDisplay->sequence_message(
+	// 		String("Press button to open locker, time left: " +  timeLeft).c_str(),
+	// 		1
+	// 	);
+	// 	delay(1000);
+	// 	timeLeft--;
+	// }
+	// lockerDisplay->sequence_message("Timed out...", 3);
+}
+
+/*
+	Resolves scope problem
+	passes user id between callbacks
+*/
+String last;
+
 void registerHandlers(
 	PusherService &webSocketService,
-	LockerService &lockerService,
+	LockerService &device,
 	Display *lockerDisplay,
 	const char *mainChannel
 ) {
 	webSocketService.registerEventHandler(
 		subscriptionSucceededEvent,
 		[lockerDisplay](const String& message) {
-		lockerDisplay->displayText("Online");
+		lockerDisplay->const_message("Online");
 	});
 	webSocketService.registerEventHandler(
 		memberAddedEvent,
@@ -31,11 +56,12 @@ void registerHandlers(
 			PusherService::Message msg(message.c_str());
 			PusherService::Message user(msg.getItem("user_info").c_str());
 			lockerDisplay
-				->displayText(
+				->message(
 					actionDisplay(
 						user.getItem("name").c_str(),
 						" is present"
-					).c_str()
+					).c_str(),
+					3
 				);
 	});
 	webSocketService.registerEventHandler(
@@ -44,14 +70,20 @@ void registerHandlers(
 			PusherService::Message msg(message.c_str());
 			PusherService::Message user(msg.getItem("user_info").c_str());
 			lockerDisplay
-				->displayText(
+				->message(
 					actionDisplay(
 						user.getItem("name").c_str(),
 						" has left"
-					).c_str()
+					).c_str(),
+					3
 				);
-
 	});
+	webSocketService.registerEventHandler(
+		"pusher:ping",
+		[&webSocketService](const String& message) {
+			webSocketService.sendMessage("pusher:pong", "", "{}");
+		}
+	);
 	webSocketService.registerEventHandler(
 		"client-ping",
 		[&webSocketService, mainChannel](const String& message) {
@@ -59,25 +91,65 @@ void registerHandlers(
 				mainChannel,
 				"{\"message\":\"online\"}"
 			);
-	});
+		},
+		mainChannel,
+		[lockerDisplay](const char *id)->bool {
+			return true;
+		}
+	);
 	webSocketService.registerEventHandler(
 		openLockerEvent,
-		[&webSocketService, &lockerService, mainChannel, lockerDisplay](const String& message) {
+		[&webSocketService, &device, mainChannel, lockerDisplay](
+			const String& message
+		) {
 			PusherService::Message msg(message.c_str());
-			bool commenced = lockerService.commitOpenSequence(
-				atoi(msg.getItem("locker_id").c_str()),
-				msg.user_id(),
+			const String event = String(
+				"client-open-seq-" + last // passed by global scope
+			);
+			Serial.print("Register open commit: ");
+			Serial.println(msg.getItem("message"));
+			bool commenced = device.commitOpenSequence(
+				atoi(msg.getItem("bicycle_id").c_str()),
+				msg.getItem("message"),
+				last, // is in global scope
 				msg.getItem("duration")
 			);
+			Serial.print("commenced: ");
+			Serial.println(commenced);
 			webSocketService.sendMessage(
-				"client-open-locker",
+				event.c_str(),
 				mainChannel,
 				getSequenceMessage(commenced).c_str()
 			);
-			lockerDisplay->displayText(
-				"Press button to open locker"
-			);
-	});
+			sequenceTimerDisplay(lockerDisplay);
+			// lockerDisplay->message(
+			// 	"Press button to open locker",
+			// 	10
+			// );
+		},
+		mainChannel,
+		[device](const char *id)->bool {
+			last = id; // is in global scope
+			return !device.inCommitedOpenSequence();
+		}
+	);
+	webSocketService.registerEventHandler(
+		"lend-status",
+		[&device](const String &message){
+			device.endOpenSequence();
+		},
+		mainChannel
+	);
+	webSocketService.registerEventHandler(
+		"client-sequence-abort",
+		[&device](const String &message){
+			device.endOpenSequence();
+		},
+		mainChannel,
+		[&device](const char *id)->bool {
+			return device.requestCancelPermit(id);
+		}
+	);
 }
 
 
@@ -96,14 +168,17 @@ void autoSubscribeToChannel(
 ) {
 	lockerOnlineService.registerEventHandler(
 		connectionEvent,
-		[&fetcher, &lockerOnlineService, mainChannel, display](const String& message) {
-			lockerOnlineService.socket_id = WebSocketService::Message(message.c_str())
-																	.getItem("socket_id");
+		[&fetcher, &lockerOnlineService, mainChannel, display](
+			const String& message
+		) {
+			lockerOnlineService.socket_id
+				= WebSocketService::Message(message.c_str())
+					.getItem("socket_id");
 			const char* data[] = {lockerOnlineService.socket_id.c_str(),
 									mainChannel, NULL };
 			const String response = fetcher.post<requestAuthorize>(data);
 			lockerOnlineService.Subscribe(mainChannel, response);
-			display->displayText("Pusher Service Connected");
+			display->message("Pusher Service Connected", 3000);
 	});
 }
 
@@ -115,6 +190,7 @@ const String SequenceReport(const bool unlocked) {
 const String SequenceReportDisplay(const bool unlocked) {
 	return String("Locker ") + (unlocked ? "unlocked" : "timedout");
 }
+
 /*
 	A callback for when an unlock sequence is completed.
 	// provide api:
@@ -122,6 +198,11 @@ const String SequenceReportDisplay(const bool unlocked) {
 		"bicycle_id" = "locker_id",
 		"duration"
 */
+
+#define PURPOSE_OPEN "open"
+#define PURPOSE_RETURN "return"
+#define PURPOSE_BORROW "give"
+
 LockerService::LockerSequenceCallBack lockerSequenceCallback(
 	PusherService& socket,
 	HTTPInterface& fetcher,
@@ -131,25 +212,44 @@ LockerService::LockerSequenceCallBack lockerSequenceCallback(
 	return [&socket, &fetcher, mainChannel, display](
 		const bool unlocked,
 		const String& requestee,
+		const String& purpose,
 		const String& lockerId,
 		const String& duration
 	) {
+		display->message("Please wait...", 2000); // make loading interval
 		socket.sendMessage(
-			openLockerEvent,
+			"client-locker-button-press",
+			mainChannel,
+			"{\"message\":\"btn-prs\"}"
+		);
+		if (unlocked) {
+			if (purpose == PURPOSE_BORROW) {
+				const char* data[] = {
+					"borrow",
+					requestee.c_str(),
+					lockerId.c_str(),
+					duration.c_str(),
+					NULL
+				};
+				fetcher.post<updateDatabase>(data);
+			} else if (purpose == PURPOSE_RETURN) {
+				const char* data[] = {
+					"return",
+					requestee.c_str(),
+					lockerId.c_str(),
+					NULL
+				};
+				fetcher.post<updateDatabase>(data);
+			}
+		}
+		socket.sendMessage(
+			"client-locker-register",
 			mainChannel,
 			SequenceReport(unlocked).c_str()
 		);
-		display->displayText(SequenceReportDisplay(unlocked).c_str());
-		if (!unlocked) return;
-		const char* data[] = {
-			requestee.c_str(),
-			lockerId.c_str(),
-			duration.c_str(),
-			NULL
-		};
-		fetcher.post<updateDatabase>(data);
-		display->displayText(
-			actionDisplay(requestee, " locker is open").c_str()
+		display->message(
+			SequenceReportDisplay(unlocked).c_str(),
+			3
 		);
 	};
 }
