@@ -26,7 +26,8 @@ class Display {
 
 		void const_message(const char *text);
 		void message(const char *text, uint16_t seconds);
-		void sequence_message(const char *text, uint16_t seconds, bool interval = false);
+		void sequence_message(const char *text, uint16_t seconds);
+		void toggle_repeat_on();
 
 		// void resetCursor();
 	private:
@@ -38,29 +39,41 @@ class Display {
 			public:
 				Message(
 					const char *text,
-					uint16_t seconds,
+					const uint16_t seconds,
 					const uint64_t (*xx_time_get_time)(),
-					bool interval = false
+					const uint64_t startTime = 0
 				);
 				virtual ~Message();
 				Message(const Message &rhs);
 				// Message &operator=(const Message &rhs);
 
-				const bool	expired();
-				const bool	isInterval() const;
+				const bool	expired() const;
 				const String &get() const;
+				const uint64_t expiry() const;
+				void resetExpiry();
 
 			private:
 				const String	text;
 				const uint16_t	seconds;
 				uint64_t		startTime;
 				const uint64_t (*xx_time_get_time)();
-				const bool		interval;
-				bool			started;
 		};
 		std::list<Message> messages;
-
+		std::list<Message>::iterator sequence_message_iterator;
+		bool sequenceIsSetToRepeat() const;
+		void handle_repeated_sequence();
+		void sequence_message_next();
+		void sequence_message_reset();
+		void toggle_repeat_off();
 		static const uint64_t xx_time_get_time();
+};
+
+namespace DisplayMods {
+
+	void setRepeatingMessage(Display *display, const char *text, uint16_t seconds);
+
+	void loadingDots(Display *display, const char *text);
+	void countdownTimer(Display *display, const char *text, uint8_t seconds);
 };
 
 #endif

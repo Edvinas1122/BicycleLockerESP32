@@ -14,25 +14,6 @@ const String actionDisplay(const String &requestee, const char *action) {
 	return String(requestee + action);
 }
 
-static void sequenceTimerDisplay(
-	Display *lockerDisplay
-) {
-	int timeLeft = 10;
-	lockerDisplay->message(
-		"Press button to open locker: ",
-		10
-	);
-	// while (timeLeft > 0) {
-	// 	lockerDisplay->sequence_message(
-	// 		String("Press button to open locker, time left: " +  timeLeft).c_str(),
-	// 		1
-	// 	);
-	// 	delay(1000);
-	// 	timeLeft--;
-	// }
-	// lockerDisplay->sequence_message("Timed out...", 3);
-}
-
 /*
 	Resolves scope problem
 	passes user id between callbacks
@@ -121,11 +102,12 @@ void registerHandlers(
 				mainChannel,
 				getSequenceMessage(commenced).c_str()
 			);
-			sequenceTimerDisplay(lockerDisplay);
-			// lockerDisplay->message(
-			// 	"Press button to open locker",
-			// 	10
-			// );
+			DisplayMods::countdownTimer(
+				lockerDisplay,
+				"Press button to open locker: ",
+				10
+			);
+			// sequenceTimerDisplay(lockerDisplay);
 		},
 		mainChannel,
 		[device](const char *id)->bool {
@@ -142,8 +124,9 @@ void registerHandlers(
 	);
 	webSocketService.registerEventHandler(
 		"client-sequence-abort",
-		[&device](const String &message){
+		[&device, lockerDisplay](const String &message){
 			device.endOpenSequence();
+			lockerDisplay->message("Unlock aborted", 3);
 		},
 		mainChannel,
 		[&device](const char *id)->bool {

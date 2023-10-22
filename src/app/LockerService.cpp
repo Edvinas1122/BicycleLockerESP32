@@ -15,10 +15,9 @@ LockerService::LockerService(
 		Lock(17),
 		Lock(18),
 		Lock(19)
-	})
-{
-	this->buttonPressCallback = callback;
-}
+	}),
+	buttonPressCallback(callback)
+{}
 
 LockerService::~LockerService() {}
 

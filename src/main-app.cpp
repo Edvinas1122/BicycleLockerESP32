@@ -9,18 +9,18 @@
 
 Display display;
 
-bool run = false;
+bool connected = false;
 Network	localNetwork(
 			LOCAL_SSID,
 			LOCAL_USER,
 			LOCAL_PASSWORD,
 			[](const char* message) {Serial.print(message);},
 			[]() {
-				run = true;
+				connected = true;
 				display.message("Have established connection.", 3);
 			},
 			[]() {
-				run = false;
+				connected = false;
 				WiFi.disconnect(true);
 				display.const_message("Not connected.");
 			}
@@ -82,7 +82,7 @@ void setup()
 {
 	Serial.begin(115200);
 	display.init();
-	display.const_message("Connecting...");
+	DisplayMods::loadingDots(&display, "Connecting");
 	lockerService.init();
 	autoSubscribeToChannel(
 		interface,
@@ -103,7 +103,7 @@ uint8_t connectionAttempts = 0;
 
 void loop()
 {
-	if (run) {
+	if (connected) {
 		if (webSocketService.poll()) {
 			connectionAttempts = 0;
 		} else {
@@ -117,5 +117,5 @@ void loop()
 	}
 	lockerService.poll();
 	display.poll();
-	delay(150);
+	delay(100);
 }

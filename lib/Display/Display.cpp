@@ -3,7 +3,8 @@
 Display::Display():
 	display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire),
 	cursorX(0),
-	cursorY(0)
+	cursorY(0),
+	sequence_message_iterator(messages.end())
 {
 	constantText.reserve(40);
 }
@@ -38,35 +39,60 @@ void Display::displayText(const char *text) {
 
 void Display::const_message(const char *text) {
 	messages.clear();
+	toggle_repeat_off();
 	constantText = text;
 }
 
-void Display::message(const char *text, uint16_t seconds) {
+void Display::message(
+	const char *text,
+	uint16_t seconds
+) {
+
 	messages.clear();
-	messages.emplace_back(text, seconds, xx_time_get_time);
+	toggle_repeat_off();
+	messages.emplace_back(
+		text,
+		seconds,
+		xx_time_get_time,
+		xx_time_get_time()
+	);
 }
 
 void Display::sequence_message(
 	const char *text,
-	uint16_t seconds,
-	bool interval
+	uint16_t seconds
 ) {
-	messages.emplace_back(text, seconds, xx_time_get_time);
+	const uint64_t previous_expires_at = messages.back().expiry();
+	messages.emplace_back(
+		text,
+		seconds,
+		xx_time_get_time,
+		previous_expires_at
+	);
+}
+
+bool Display::sequenceIsSetToRepeat() const {
+	if (messages.empty()) {
+		return false;
+	}
+	return sequence_message_iterator != messages.end();
 }
 
 Display::Message::Message(
 	const char *text,
-	uint16_t seconds,
+	const uint16_t seconds,
 	const uint64_t (*xx_time_get_time)(),
-	bool interval
+	const uint64_t startTime
 ):
 	text(text),
 	seconds(seconds),
-	startTime(xx_time_get_time()),
-	xx_time_get_time(xx_time_get_time),
-	interval(interval),
-	started(false)
-{}
+	startTime(startTime),
+	xx_time_get_time(xx_time_get_time)
+{
+	if (startTime == 0) {
+		this->startTime = xx_time_get_time();
+	}
+}
 
 Display::Message::~Message() {}
 
@@ -74,48 +100,69 @@ Display::Message::Message(const Message &rhs):
 	text(rhs.text),
 	seconds(rhs.seconds),
 	startTime(rhs.startTime),
-	xx_time_get_time(rhs.xx_time_get_time),
-	interval(rhs.interval),
-	started(false)
+	xx_time_get_time(rhs.xx_time_get_time)
 {}
 
-// Display::Message &Display::Message::operator=(const Message &rhs) {
-// 	if(this != &rhs) {
-// 		text = rhs.text;
-// 		seconds = rhs.seconds;
-// 		startTime = rhs.startTime;
-// 		xx_time_get_time = rhs.xx_time_get_time;
-// 	}
-// 	return *this;
-// }
-
-const bool Display::Message::expired() {
-	if (!started) {
-		started = true;
-		startTime = this->xx_time_get_time();
-	}
+const bool Display::Message::expired() const {
 	return this->xx_time_get_time() - startTime > seconds * 1000;
-}
-
-const bool Display::Message::isInterval() const {
-	return interval;
 }
 
 const String &Display::Message::get() const {
 	return text;
 }
 
+const uint64_t Display::Message::expiry() const {
+	return startTime + seconds * 1000;
+}
+
+/*
+	for repeated sequences.
+*/
+void Display::Message::resetExpiry() {
+	startTime = xx_time_get_time();
+}
+
 void Display::poll() {
+	if (sequenceIsSetToRepeat()) {
+		handle_repeated_sequence();
+		return;
+	}
 	if (!messages.empty() && messages.front().expired()) {
 		messages.pop_front();
 	}
 	if (messages.empty()) {
 		displayText(constantText.c_str());
 	} else {
-		Serial.print("Display::poll() message: ");
-		Serial.println(messages.front().get().c_str());
 		displayText(messages.front().get().c_str());
 	}
+}
+
+void Display::sequence_message_reset() {
+	sequence_message_iterator = messages.begin();
+}
+
+void Display::sequence_message_next() {
+	if (sequence_message_iterator == messages.end()) {
+		sequence_message_iterator = messages.begin();
+	} else {
+		sequence_message_iterator++;
+	}
+}
+
+void Display::handle_repeated_sequence() {
+	if (sequence_message_iterator->expired()) {
+		sequence_message_next();
+		sequence_message_iterator->resetExpiry();
+		displayText(sequence_message_iterator->get().c_str());
+	}
+}
+
+void Display::toggle_repeat_on() {
+	sequence_message_reset();
+}
+
+void Display::toggle_repeat_off() {
+	sequence_message_iterator = messages.end();
 }
 
 #define START_KICK_TIME 100000
