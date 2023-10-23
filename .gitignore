@@ -10,5 +10,7 @@ objects/
 objects/*
 trash/
 trash/*
-*.sh
+runLockerTest.sh
 test_locker
+*.pem
+include/cypher_key.h
