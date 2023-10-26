@@ -8,14 +8,17 @@ void setRepeatingMessage(
 	uint8_t i = 0;
 
 	display->message(messages[i], seconds);
-	while (messages[++i] != NULL) {
+	i++;
+	while (messages[i] != NULL) {
 		display->sequence_message(messages[i], seconds);
+		i++;
 	}
 	display->toggle_repeat_on();
 }
 
 #define LOADING_DOTS_COUNT 4
-#define EXPECTED_MAX_MESSAGE_LENGTH 20
+#define EXPECTED_MAX_MESSAGE_LENGTH 30
+
 
 void DisplayMods::loadingDots(Display *display, const char *text) {
 	char temp_array[LOADING_DOTS_COUNT][EXPECTED_MAX_MESSAGE_LENGTH];
@@ -26,7 +29,7 @@ void DisplayMods::loadingDots(Display *display, const char *text) {
 	{
 		memcpy(temp_array[i], text, strlen(text));
 		memset(temp_array[i] + strlen(text), '.', i);
-		temp_array[i][strlen(text) + i + 1] = '\0';
+		temp_array[i][strlen(text) + i] = '\0';
 		i++;
 	}
 	i = 0;

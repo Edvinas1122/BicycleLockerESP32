@@ -4,7 +4,8 @@ Display::Display():
 	display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire),
 	cursorX(0),
 	cursorY(0),
-	sequence_message_iterator(messages.end())
+	sequence_message_iterator(messages.end()),
+	source(nullptr)
 {
 	constantText.reserve(40);
 }
@@ -32,9 +33,19 @@ void Display::clear() {
 
 void Display::displayText(const char *text) {
 	display.clearDisplay();
-	display.setCursor(0, 0);
+	display.setCursor(0, 10);
 	display.println(text);
-	display.display();
+	// display.display();
+}
+
+void Display::setMessageSource(String (*source)()) {
+	this->source = source;
+}
+
+void Display::displayTextNextLine(const char *text) {
+	display.setCursor(0, 20);
+	display.println(text);
+	// display.display();
 }
 
 void Display::const_message(const char *text) {
@@ -132,9 +143,13 @@ void Display::poll() {
 	}
 	if (messages.empty()) {
 		displayText(constantText.c_str());
+		if (source != NULL) {
+			displayTextNextLine(source().c_str());
+		}
 	} else {
 		displayText(messages.front().get().c_str());
 	}
+	display.display();
 }
 
 void Display::sequence_message_reset() {
@@ -142,10 +157,9 @@ void Display::sequence_message_reset() {
 }
 
 void Display::sequence_message_next() {
+	sequence_message_iterator++;
 	if (sequence_message_iterator == messages.end()) {
 		sequence_message_iterator = messages.begin();
-	} else {
-		sequence_message_iterator++;
 	}
 }
 

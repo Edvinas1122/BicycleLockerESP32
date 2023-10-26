@@ -1,11 +1,10 @@
 #include <freertos/FreeRTOS.h>
 #include <Display.h>
 #include <Network.h>
-#include "env.h"
 #include "LockerService.h"
-#include <Pusher.h>
-#include <HTTPFetch.h>
-
+#include <Cypher.h>
+#include <utils.h>
+#include "env.h"
 
 Display display;
 
@@ -17,6 +16,7 @@ Network	localNetwork(
 			[](const char* message) {Serial.print(message);},
 			[]() {
 				connected = true;
+				fetchLocalTime();
 				display.message("Have established connection.", 3);
 			},
 			[]() {
@@ -26,25 +26,22 @@ Network	localNetwork(
 			}
 		);
 
+#include <Pusher.h>
+
 PusherService webSocketService(
 	PUSHER_KEY,
 	PUSHER_CLUSTER,
 	[](const char* message) {Serial.print(message);}
 );
 
-void registerHandlers(
-	PusherService &webSocketService,
-	LockerService &lockerService,
-	Display *display,
-	const char *mainChannel
-);
-void autoSubscribeToChannel(
-	HTTPInterface &interface,
-	PusherService &webSocketService,
-	Display *display,
-	const char *mainChannel
+#include "cypher_keys.h"
+
+Cypher cypher(
+	CYPHER_PUBLIC_KEY,
+	CYPHER_PRIVATE_KEY
 );
 
+#include <HTTPFetch.h>
 
 HTTPInterface interface(
 	[](const char* message) {Serial.print(message);}
@@ -54,35 +51,29 @@ HTTPInterface interface(
 	A method after once the button is pressed in 
 	a commenced sequence
 */
-LockerService
-	::LockerSequenceCallBack 
-		lockerSequenceCallback(
-			PusherService& socket,
-			HTTPInterface& lockerService,
-			Display* display,
-			const char* mainChannel
-		);
-
-LockerService
-	::LockerSequenceCallBack callback
-		= lockerSequenceCallback(
-			webSocketService,
-			interface,
-			&display,
-			"presence-locker-device"
-		);
 
 const char *mainChannel = "presence-locker-device";
 
+#include <EventHandling.h>
+
 LockerService lockerService(
-	callback
+	getButtonPressCallback(
+		webSocketService,
+		&display,
+		mainChannel),
+	getSignatureMethod(&cypher)
 );
+
+String clockDisplay() {
+	return getLocalTime();
+}
 
 void setup()
 {
 	Serial.begin(115200);
 	display.init();
 	DisplayMods::loadingDots(&display, "Connecting");
+	cypher.init();
 	lockerService.init();
 	autoSubscribeToChannel(
 		interface,
@@ -91,28 +82,38 @@ void setup()
 		mainChannel
 	);
 	registerHandlers(
+		&cypher,
 		webSocketService,
 		lockerService,
 		&display,
 		mainChannel
 	);
 	localNetwork.init();
+	display.setMessageSource(clockDisplay);
 }
 
 uint8_t connectionAttempts = 0;
+int64_t setReconnectTime = 0;
+
+static bool shouldReconnect() {
+	return setReconnectTime == 0 && xx_time_get_time() > setReconnectTime;
+}
 
 void loop()
 {
-	if (connected) {
+	if (connected && shouldReconnect()) {
 		if (webSocketService.poll()) {
 			connectionAttempts = 0;
+			setReconnectTime = 0;
 		} else {
 			connectionAttempts++;
-			display.const_message(
-				String("Pusher reconnecting... in "
-					+ String(connectionAttempts) 
-					+ " seconds").c_str());
-			delay(1000 * connectionAttempts);
+			DisplayMods::countdownTimer(
+				&display,
+				"Pusher reconnecting... in ",
+				connectionAttempts
+			);
+			setReconnectTime = xx_time_get_time() + 1000 * connectionAttempts;
+			// delay(1000 * connectionAttempts);
 		}
 	}
 	lockerService.poll();

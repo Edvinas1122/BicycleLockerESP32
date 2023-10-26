@@ -2,7 +2,7 @@
 # define LOCKER_H
 
 # include <stdint.h>
-# include <sys/time.h>
+# include <utils.h>
 # include <Arduino.h>
 
 #define MAX_NAMES_ON_SCREEN 4
@@ -14,53 +14,62 @@ const int BUTTON_PIN = 34;
 class LockerService {
 
 	public:
+	class OpenRequest {
+		public:
+		typedef std::function<String(
+			const String &locker_id
+		)> SignMethod;
 
+		OpenRequest(
+			const SignMethod signMethod
+		);
+		~OpenRequest() {};
+
+		/*
+			aka. is available
+		*/
+		bool isExpired() const;	
+
+		void set(
+			const String &locker_id,
+			const String &requestee
+		);
+		String respond();
+		bool cancel(const String &requestee);
+		const String &getRequestee() const;
+		private:
+		int64_t			timestamp;
+		String			locker_id;
+		String			requestee;
+		SignMethod		signMethod;
+		void expire();
+	};
 	typedef std::function<void(
-		bool, const String&, const String&, const String&, const String&
-	)> LockerSequenceCallBack;
+		bool unlocked,
+		const String& signature_json,
+		const String& requestee
+	)> ButtonPressCallBack;
 
 	public:
 	LockerService(
-		LockerSequenceCallBack callback = NULL
+		ButtonPressCallBack callback = NULL,
+		OpenRequest::SignMethod signMethod = NULL
 	);
 	~LockerService();
 
-	bool inCommitedOpenSequence() const;
-	bool commitOpenSequence(
-		const uint8_t lockerNumber,
-		const String &purpose,
-		const String &requestee,
-		const String &duration = ""
-	);
-	void endOpenSequence();
 	void poll();
 	void init();
-	bool requestCancelPermit(
+
+	bool available() const;
+	bool registerRequest(
+		const String &locker_id,
+		const String &requestee
+	);
+	bool cancelRequest(
 		const String &requestee
 	);
 
-	class OpenRequest {
-		OpenRequest();
-		~OpenRequest() {};
-
-		bool isExpired() const;
-		void set(
-			const uint8_t pin,
-			const int64_t timestamp,
-			const String &requestee,
-			const String &duration,
-			const String &purpose
-		);
-
-		private:
-		uint8_t pin;
-		int64_t timestamp;
-		String requestee;
-		String duration;
-		String purpose;
-		friend class LockerService;
-	};
-
+	void unlock(const String &lock_id);
 	class Lock {
 		public:
 		Lock(const uint8_t pin);
@@ -77,13 +86,12 @@ class LockerService {
 	void openLocker();
 
 	private:
-	Lock locks[LOCKER_COUNT];
 	OpenRequest openRequest;
-	LockerSequenceCallBack buttonPressCallback;
+	Lock locks[LOCKER_COUNT];
+	ButtonPressCallBack buttonPressCallback;
 	
 	void closeExpiredLocks();
-	
-	static int64_t xx_time_get_time();
+
 
 };
 

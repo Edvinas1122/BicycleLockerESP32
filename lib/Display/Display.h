@@ -28,6 +28,7 @@ class Display {
 		void message(const char *text, uint16_t seconds);
 		void sequence_message(const char *text, uint16_t seconds);
 		void toggle_repeat_on();
+		void setMessageSource(String (*source)());
 
 		// void resetCursor();
 	private:
@@ -35,6 +36,8 @@ class Display {
 		uint16_t	cursorX;
 		uint16_t	cursorY;
 		void displayText(const char *text);
+		void displayTextNextLine(const char *text);
+		String (*source)();
 		class Message {
 			public:
 				Message(
@@ -45,7 +48,6 @@ class Display {
 				);
 				virtual ~Message();
 				Message(const Message &rhs);
-				// Message &operator=(const Message &rhs);
 
 				const bool	expired() const;
 				const String &get() const;

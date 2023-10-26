@@ -1,5 +1,6 @@
 #include <Display.h>
 #include <Pusher.h>
+#include <Cypher.h>
 #include "FetchFunctions.hpp"
 #include "LockerService.h"
 
@@ -14,6 +15,7 @@ const String actionDisplay(const String &requestee, const char *action) {
 	return String(requestee + action);
 }
 
+
 /*
 	Resolves scope problem
 	passes user id between callbacks
@@ -21,6 +23,7 @@ const String actionDisplay(const String &requestee, const char *action) {
 String last;
 
 void registerHandlers(
+	Cypher *cypher,
 	PusherService &webSocketService,
 	LockerService &device,
 	Display *lockerDisplay,
@@ -58,7 +61,8 @@ void registerHandlers(
 					).c_str(),
 					3
 				);
-	});
+		}
+	);
 	webSocketService.registerEventHandler(
 		"pusher:ping",
 		[&webSocketService](const String& message) {
@@ -72,10 +76,6 @@ void registerHandlers(
 				mainChannel,
 				"{\"message\":\"online\"}"
 			);
-		},
-		mainChannel,
-		[lockerDisplay](const char *id)->bool {
-			return true;
 		}
 	);
 	webSocketService.registerEventHandler(
@@ -87,16 +87,10 @@ void registerHandlers(
 			const String event = String(
 				"client-open-seq-" + last // passed by global scope
 			);
-			Serial.print("Register open commit: ");
-			Serial.println(msg.getItem("message"));
-			bool commenced = device.commitOpenSequence(
-				atoi(msg.getItem("bicycle_id").c_str()),
-				msg.getItem("message"),
-				last, // is in global scope
-				msg.getItem("duration")
+			bool commenced = device.registerRequest(
+				msg.getItem("locker_id"),
+				last // is in global scope
 			);
-			Serial.print("commenced: ");
-			Serial.println(commenced);
 			webSocketService.sendMessage(
 				event.c_str(),
 				mainChannel,
@@ -107,32 +101,54 @@ void registerHandlers(
 				"Press button to open locker: ",
 				10
 			);
-			// sequenceTimerDisplay(lockerDisplay);
 		},
 		mainChannel,
 		[device](const char *id)->bool {
 			last = id; // is in global scope
-			return !device.inCommitedOpenSequence();
+			return device.available();
 		}
 	);
-	webSocketService.registerEventHandler(
-		"lend-status",
-		[&device](const String &message){
-			device.endOpenSequence();
-		},
-		mainChannel
-	);
+	// webSocketService.registerEventHandler(
+	// 	"lend-status",
+	// 	[&device](const String &message){
+	// 		device.
+	// 	},
+	// 	mainChannel
+	// );
 	webSocketService.registerEventHandler(
 		"client-sequence-abort",
 		[&device, lockerDisplay](const String &message){
-			device.endOpenSequence();
 			lockerDisplay->message("Unlock aborted", 3);
+			device.cancelRequest(last);
 		},
 		mainChannel,
 		[&device](const char *id)->bool {
-			return device.requestCancelPermit(id);
+			last = id;
+			return !device.available();
 		}
 	);
+	webSocketService.registerEventHandler(
+		"unlock-command",
+		[&device, lockerDisplay](const String &message){
+			PusherService::Message msg(message.c_str());
+			const String locker = msg.getItem("locker_id");
+			lockerDisplay->message("Unlocked", 5);
+			lockerDisplay->sequence_message("Close locker", 2);
+			device.unlock(locker);
+		}
+	);
+	// webSocketService.registerEventHandler(
+	// 	"test-rsa",
+	// 	[cypher](const String &message){
+	// 		PusherService::Message msg(message.c_str());
+	// 		String received = msg.getItem("message");
+	// 		const char *signature = msg.getItem("signature").c_str();
+	// 		const bool valid = cypher->verify(
+	// 			received.c_str(),
+	// 			signature
+	// 		);
+	// 	}
+	// );
 }
 
 
@@ -143,96 +159,35 @@ void registerHandlers(
 	HTTPInterface is a dependency for an action because,
 	we need to make a request to our web service to get authourization.
 */
+static void subscribeToPresenceChannel(
+	HTTPInterface &fetcher,
+	PusherService &socket,
+	const char *channel
+) {
+	const char* data[] = {socket.socket_id.c_str(), channel, NULL };
+	const String response = fetcher.post<requestAuthorize>(data);
+	socket.Subscribe(channel, response);
+}
+
 void autoSubscribeToChannel(
 	HTTPInterface &fetcher,
-	PusherService &lockerOnlineService,
+	PusherService &socket,
 	Display *display,
 	const char *mainChannel
 ) {
-	lockerOnlineService.registerEventHandler(
+	socket.registerEventHandler(
 		connectionEvent,
-		[&fetcher, &lockerOnlineService, mainChannel, display](
+		[&fetcher, &socket, mainChannel, display](
 			const String& message
 		) {
-			lockerOnlineService.socket_id
+			socket.socket_id
 				= WebSocketService::Message(message.c_str())
 					.getItem("socket_id");
-			const char* data[] = {lockerOnlineService.socket_id.c_str(),
-									mainChannel, NULL };
-			const String response = fetcher.post<requestAuthorize>(data);
-			lockerOnlineService.Subscribe(mainChannel, response);
+			subscribeToPresenceChannel(
+				fetcher,
+				socket,
+				mainChannel
+			);
 			display->message("Pusher Service Connected", 3000);
 	});
-}
-
-
-const String SequenceReport(const bool unlocked) {
-	return String("{\"message\":") + (unlocked ? "\"unlocked\"" : "\"timedout\"") + "}";
-}
-
-const String SequenceReportDisplay(const bool unlocked) {
-	return String("Locker ") + (unlocked ? "unlocked" : "timedout");
-}
-
-/*
-	A callback for when an unlock sequence is completed.
-	// provide api:
-		"user_id",
-		"bicycle_id" = "locker_id",
-		"duration"
-*/
-
-#define PURPOSE_OPEN "open"
-#define PURPOSE_RETURN "return"
-#define PURPOSE_BORROW "give"
-
-LockerService::LockerSequenceCallBack lockerSequenceCallback(
-	PusherService& socket,
-	HTTPInterface& fetcher,
-	Display* display,
-	const char* mainChannel
-) {
-	return [&socket, &fetcher, mainChannel, display](
-		const bool unlocked,
-		const String& requestee,
-		const String& purpose,
-		const String& lockerId,
-		const String& duration
-	) {
-		display->message("Please wait...", 2000); // make loading interval
-		socket.sendMessage(
-			"client-locker-button-press",
-			mainChannel,
-			"{\"message\":\"btn-prs\"}"
-		);
-		if (unlocked) {
-			if (purpose == PURPOSE_BORROW) {
-				const char* data[] = {
-					"borrow",
-					requestee.c_str(),
-					lockerId.c_str(),
-					duration.c_str(),
-					NULL
-				};
-				fetcher.post<updateDatabase>(data);
-			} else if (purpose == PURPOSE_RETURN) {
-				const char* data[] = {
-					"return",
-					requestee.c_str(),
-					lockerId.c_str(),
-					NULL
-				};
-				fetcher.post<updateDatabase>(data);
-			}
-		}
-		socket.sendMessage(
-			"client-locker-register",
-			mainChannel,
-			SequenceReport(unlocked).c_str()
-		);
-		display->message(
-			SequenceReportDisplay(unlocked).c_str(),
-			3
-		);
-	};
 }
