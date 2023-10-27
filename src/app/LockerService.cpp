@@ -6,16 +6,16 @@ LockerService::LockerService(
 ) :
 	openRequest(signMethod),
 	locks({
-		Lock(2),
-		Lock(4),
-		Lock(5),
+		Lock(12),
+		Lock(25), /* 2 locker */
+		Lock(18), /* 3 locker */
 		Lock(13),
 		Lock(14),
 		Lock(15),
 		Lock(16),
+		Lock(27),
 		Lock(17),
-		Lock(18),
-		Lock(19)
+		Lock(19) /*10 locker*/
 	}),
 	buttonPressCallback(callback)
 {}
@@ -106,7 +106,11 @@ void LockerService::closeExpiredLocks() {
 }
 
 void LockerService::unlock(const String &locker_id) {
-	uint8_t lockerIndex = locker_id.toInt();
+	uint8_t lockerIndex = locker_id.toInt() - 1;
+	if (lockerIndex > LOCKER_COUNT) {
+		Serial.println("invalid locker id");
+		return;
+	}
 	locks[lockerIndex].open();
 }
 
@@ -114,7 +118,7 @@ LockerService::Lock::Lock(const uint8_t pin):
 	pin(pin), timestamp(0) {}
 
 void LockerService::Lock::open() {
-	// digitalWrite(pin, HIGH);
+	digitalWrite(pin, HIGH);
 	timestamp = xx_time_get_time();
 	Serial.print("open ");
 	Serial.println(pin);
